@@ -1,81 +1,21 @@
 // @risklight/models — Collection
-// TDD: implement to pass test/core/Collection.spec.ts
 
+import { defaults as _defaults, isEmpty, isFunction, castArray } from 'lodash-es'
 import { Model } from './Model'
+import { Request } from './Request'
+
+type Listener = (context: Record<string, any>) => void
 
 export class Collection<M extends Model = Model> {
   [key: string]: any
 
-  constructor(_models?: (M | Record<string, any>)[], _options?: Record<string, any>, _attributes?: Record<string, any>) {
-    throw new Error('Not implemented')
-  }
-
-  // --- Configuration ---
-  model(): new (...args: any[]) => M { return Model as any }
-  defaults(): Record<string, any> { return {} }
-  routes(): Record<string, string> { return {} }
-
-  // --- Models array ---
-  get models(): M[] { throw new Error('Not implemented') }
-  get length(): number { throw new Error('Not implemented') }
-
-  // --- Add / Remove ---
-  add(_model: M | M[] | Record<string, any> | Record<string, any>[]): any { throw new Error('Not implemented') }
-  remove(_model: M | M[] | ((model: M) => boolean)): any { throw new Error('Not implemented') }
-  clear(): void { throw new Error('Not implemented') }
-  clearModels(): void { throw new Error('Not implemented') }
-  replace(_models: M | M[]): void { throw new Error('Not implemented') }
-  createModel(_attributes: Record<string, any>): M { throw new Error('Not implemented') }
-
-  // --- Querying ---
-  size(): number { throw new Error('Not implemented') }
-  isEmpty(): boolean { throw new Error('Not implemented') }
-  find(_predicate: (model: M) => boolean): M | undefined { throw new Error('Not implemented') }
-  where(_predicate: (model: M) => boolean): M[] { throw new Error('Not implemented') }
-  filter(_predicate: (model: M) => boolean): Collection<M> { throw new Error('Not implemented') }
-  has(_model: M): boolean { throw new Error('Not implemented') }
-  indexOf(_model: M): number { throw new Error('Not implemented') }
-  first(): M | undefined { throw new Error('Not implemented') }
-  last(): M | undefined { throw new Error('Not implemented') }
-  shift(): M | undefined { throw new Error('Not implemented') }
-  pop(): M | undefined { throw new Error('Not implemented') }
-
-  // --- Iteration ---
-  each(_callback: (model: M) => void): void { throw new Error('Not implemented') }
-  map<T>(_callback: (model: M) => T): T[] { throw new Error('Not implemented') }
-  reduce<U>(_iteratee: (result: U, model: M, index: number) => U, _initial?: U): U { throw new Error('Not implemented') }
-  sum(_iteratee: (model: M) => number): number { throw new Error('Not implemented') }
-  count(_iteratee: (model: M) => any): Record<string, number> { throw new Error('Not implemented') }
-  sort(_comparator: string | ((model: M) => any)): void { throw new Error('Not implemented') }
-
-  // --- Events ---
-  on(_event: string, _callback: Function): void { throw new Error('Not implemented') }
-  off(_event: string, _callback: Function): void { throw new Error('Not implemented') }
-  emit(_event: string, _context?: Record<string, any>): void { throw new Error('Not implemented') }
-
-  // --- Pagination ---
-  page(_page: number | boolean): this { throw new Error('Not implemented') }
-  getPage(): number | null { throw new Error('Not implemented') }
-  isPaginated(): boolean { throw new Error('Not implemented') }
-  isLastPage(): boolean { throw new Error('Not implemented') }
-
-  // --- Validation ---
-  validate(): Promise<any> { throw new Error('Not implemented') }
-  getErrors(): Record<string, any>[] { throw new Error('Not implemented') }
-
-  // --- Sync ---
-  sync(): void { throw new Error('Not implemented') }
-  reset(..._attributes: string[]): void { throw new Error('Not implemented') }
-
-  // --- Attributes ---
-  get(_attribute: string, _fallback?: any): any { throw new Error('Not implemented') }
-  set(_attribute: string | Record<string, any>, _value?: any): void { throw new Error('Not implemented') }
-  getAttributes(): Record<string, any> { throw new Error('Not implemented') }
-  getModels(): M[] { throw new Error('Not implemented') }
-
-  // --- Serialization ---
-  toJSON(): any[] { throw new Error('Not implemented') }
-  toArray(): Record<string, any>[] { throw new Error('Not implemented') }
+  _models: M[] = []
+  _attributes: Record<string, any> = {}
+  _listeners: Record<string, Set<Listener>> = {}
+  _options: Record<string, any> = {}
+  _page: number | null = null
+  _lastPage: boolean = false
+  _registry: Set<string> = new Set()
 
   // --- HTTP: state flags ---
   loading: boolean = false
@@ -83,34 +23,495 @@ export class Collection<M extends Model = Model> {
   deleting: boolean = false
   fatal: boolean = false
 
+  // --- RequestOperation constants ---
+  static REQUEST_CONTINUE = 0
+  static REQUEST_SKIP = 1
+  static REQUEST_REDUNDANT = 2
+
+  constructor(models?: (M | Record<string, any>)[], options?: Record<string, any>, attributes?: Record<string, any>) {
+    this._options = _defaults({}, options, this.getDefaultOptions())
+    this._attributes = { ...this.defaults(), ...attributes }
+
+    if (models && models.length) {
+      for (const m of models) {
+        this._addModel(m, false)
+      }
+    }
+
+    this.boot()
+  }
+
+  // --- Configuration ---
+  model(): new (...args: any[]) => M { return Model as any }
+  defaults(): Record<string, any> { return {} }
+  routes(): Record<string, string> { return {} }
+  options(): Record<string, any> { return {} }
+  boot(): void {}
+
+  getDefaultOptions(): Record<string, any> {
+    return {
+      useDeleteBody: true,
+      routeParameterPattern: /\{([^}]+)\}/,
+      methods: {
+        fetch: 'GET',
+        save: 'POST',
+        delete: 'DELETE',
+      },
+    }
+  }
+
+  // --- Models array ---
+  get models(): M[] { return this._models }
+  get length(): number { return this._models.length }
+
+  // --- Internal ---
+
+  private _addModel(modelOrAttrs: M | Record<string, any>, emitEvent: boolean = true): M {
+    let m: M
+    if (modelOrAttrs instanceof Model) {
+      m = modelOrAttrs as M
+    } else {
+      m = this.createModel(modelOrAttrs)
+    }
+    m.registerCollection(this)
+    this._models.push(m)
+    if (emitEvent) this.emit('add', { model: m })
+    return m
+  }
+
+  // --- Add / Remove ---
+
+  add(model: M | M[] | Record<string, any> | Record<string, any>[]): any {
+    if (Array.isArray(model)) {
+      return model.map(m => this._addModel(m))
+    }
+    return this._addModel(model)
+  }
+
+  remove(model: M | M[] | ((model: M) => boolean)): any {
+    if (isFunction(model)) {
+      const predicate = model as (model: M) => boolean
+      const toRemove = this._models.filter(predicate)
+      for (const m of toRemove) {
+        this._removeModel(m)
+      }
+      return toRemove
+    }
+    if (Array.isArray(model)) {
+      return model.map(m => this._removeModel(m))
+    }
+    return this._removeModel(model as M)
+  }
+
+  private _removeModel(model: M): M {
+    const idx = this._models.indexOf(model)
+    if (idx !== -1) {
+      this._models.splice(idx, 1)
+      model.unregisterCollection(this)
+      this.emit('remove', { model })
+    }
+    return model
+  }
+
+  clear(): void {
+    this.clearModels()
+    this.clearState()
+  }
+
+  clearModels(): void {
+    this._models = []
+  }
+
+  clearState(): void {
+    this.loading = false
+    this.saving = false
+    this.deleting = false
+    this.fatal = false
+  }
+
+  clearErrors(): void {
+    for (const m of this._models) m.clearErrors()
+  }
+
+  replace(models: M | M[]): void {
+    this._models = []
+    const arr = Array.isArray(models) ? models : [models]
+    for (const m of arr) {
+      this._addModel(m, false)
+    }
+  }
+
+  createModel(attributes: Record<string, any>): M {
+    const ModelClass = this.model()
+    return new ModelClass(attributes, this)
+  }
+
+  // --- Querying ---
+
+  size(): number { return this._models.length }
+  isEmpty(): boolean { return this._models.length === 0 }
+
+  find(predicate: (model: M) => boolean): M | undefined {
+    return this._models.find(predicate)
+  }
+
+  where(predicate: (model: M) => boolean): M[] {
+    return this._models.filter(predicate)
+  }
+
+  filter(predicate: (model: M) => boolean): Collection<M> {
+    const Constructor = this.constructor as any
+    const filtered = new Constructor()
+    filtered._models = this._models.filter(predicate)
+    return filtered
+  }
+
+  has(model: M): boolean {
+    return this._models.includes(model)
+  }
+
+  indexOf(model: M): number {
+    return this._models.indexOf(model)
+  }
+
+  first(): M | undefined { return this._models[0] }
+  last(): M | undefined { return this._models[this._models.length - 1] }
+
+  shift(): M | undefined {
+    const m = this._models.shift()
+    if (m) this.emit('remove', { model: m })
+    return m
+  }
+
+  pop(): M | undefined {
+    const m = this._models.pop()
+    if (m) this.emit('remove', { model: m })
+    return m
+  }
+
+  // --- Iteration ---
+
+  each(callback: (model: M) => void): void {
+    this._models.forEach(callback)
+  }
+
+  map<T>(callback: (model: M) => T): T[] {
+    return this._models.map(callback)
+  }
+
+  reduce<U>(iteratee: (result: U, model: M, index: number) => U, initial?: U): U {
+    return this._models.reduce(iteratee, initial as U)
+  }
+
+  sum(iteratee: (model: M) => number): number {
+    return this._models.reduce((sum, m) => sum + iteratee(m), 0)
+  }
+
+  count(iteratee: (model: M) => any): Record<string, number> {
+    const result: Record<string, number> = {}
+    for (const m of this._models) {
+      const key = String(iteratee(m))
+      result[key] = (result[key] || 0) + 1
+    }
+    return result
+  }
+
+  sort(comparator: string | ((model: M) => any)): void {
+    if (typeof comparator === 'string') {
+      const key = comparator
+      this._models.sort((a, b) => {
+        const va = a.get(key)
+        const vb = b.get(key)
+        return va < vb ? -1 : va > vb ? 1 : 0
+      })
+    } else {
+      this._models.sort((a, b) => {
+        const va = comparator(a)
+        const vb = comparator(b)
+        return va < vb ? -1 : va > vb ? 1 : 0
+      })
+    }
+  }
+
+  // --- Events ---
+
+  on(event: string, callback: Function): void {
+    const events = event.split(',').map(e => e.trim())
+    for (const evt of events) {
+      if (!this._listeners[evt]) this._listeners[evt] = new Set()
+      this._listeners[evt].add(callback as Listener)
+    }
+  }
+
+  off(event: string, callback: Function): void {
+    const events = event.split(',').map(e => e.trim())
+    for (const evt of events) {
+      this._listeners[evt]?.delete(callback as Listener)
+    }
+  }
+
+  emit(event: string, context: Record<string, any> = {}): void {
+    this._listeners[event]?.forEach(fn => fn(context))
+  }
+
+  // --- Pagination ---
+
+  page(page: number | boolean): this {
+    if (page === false || page === null) {
+      this._page = null
+    } else {
+      this._page = page as number
+    }
+    return this
+  }
+
+  getPage(): number | null { return this._page }
+  isPaginated(): boolean { return this._page !== null }
+  isLastPage(): boolean { return this._lastPage }
+
+  // --- Validation ---
+
+  async validate(): Promise<any> {
+    return Promise.all(this._models.map(m => m.validate()))
+  }
+
+  getErrors(): Record<string, any>[] {
+    return this._models.map(m => m.errors)
+  }
+
+  // --- Sync ---
+
+  sync(): void {
+    this._models.forEach(m => m.sync())
+  }
+
+  reset(...attributes: string[]): void {
+    this._models.forEach(m => m.reset(attributes.length ? attributes : undefined))
+  }
+
+  // --- Attributes ---
+
+  get(attribute: string, fallback?: any): any {
+    return attribute in this._attributes ? this._attributes[attribute] : fallback
+  }
+
+  set(attribute: string | Record<string, any>, value?: any): void {
+    if (typeof attribute === 'object') {
+      Object.assign(this._attributes, attribute)
+    } else {
+      this._attributes[attribute] = value
+    }
+  }
+
+  getAttributes(): Record<string, any> { return { ...this._attributes } }
+  getModels(): M[] { return this._models }
+
+  // --- Serialization ---
+
+  toJSON(): any[] {
+    return this._models.map(m => m.toJSON())
+  }
+
+  toArray(): Record<string, any>[] {
+    return this._models.map(m => m.toJSON())
+  }
+
   // --- HTTP: route resolution ---
-  getFetchURL(): string { throw new Error('Not implemented') }
-  getSaveURL(): string { throw new Error('Not implemented') }
-  getDeleteURL(): string { throw new Error('Not implemented') }
+
+  getRoute(key: string, fallback?: string): string {
+    return this.routes()[key] || fallback || ''
+  }
+
+  getRouteParameterPattern(): RegExp | string {
+    return this._options.routeParameterPattern || /\{([^}]+)\}/
+  }
+
+  getURL(route: string, parameters?: Record<string, any>): string {
+    const params = parameters || this._attributes
+    const pattern = this.getRouteParameterPattern()
+    const regex = new RegExp(pattern instanceof RegExp ? pattern.source : pattern, 'g')
+    return route.replace(regex, (_match, key) => {
+      const value = params[key]
+      return value !== null && value !== undefined ? String(value) : ''
+    })
+  }
+
+  getFetchURL(): string { return this.getURL(this.getRoute('fetch')) }
+  getSaveURL(): string { return this.getURL(this.getRoute('save')) }
+  getDeleteURL(): string { return this.getURL(this.getRoute('delete')) }
 
   // --- HTTP: lifecycle ---
-  onFetch(): Promise<number> { throw new Error('Not implemented') }
-  onFetchSuccess(_response: any): void { throw new Error('Not implemented') }
-  onFetchFailure(_error: any, _response?: any): void { throw new Error('Not implemented') }
-  onSave(): Promise<number> { throw new Error('Not implemented') }
-  onSaveSuccess(_response: any): void { throw new Error('Not implemented') }
-  onSaveFailure(_error: any, _response?: any): void { throw new Error('Not implemented') }
-  onDelete(): Promise<number> { throw new Error('Not implemented') }
-  onDeleteSuccess(_response: any): void { throw new Error('Not implemented') }
-  onDeleteFailure(_error: any, _response?: any): void { throw new Error('Not implemented') }
+
+  onFetch(): Promise<number> {
+    return new Promise((resolve) => {
+      if (this.isPaginated() && this.isLastPage()) {
+        return resolve(Collection.REQUEST_SKIP)
+      }
+      this.loading = true
+      resolve(Collection.REQUEST_CONTINUE)
+    })
+  }
+
+  onFetchSuccess(response: any): void {
+    const models = this.getModelsFromResponse(response)
+    if (Array.isArray(models)) {
+      this.replace(models.map((attrs: any) => this.createModel(attrs)))
+    }
+    this.loading = false
+    this.fatal = false
+    this.emit('fetch', { error: null })
+  }
+
+  onFetchFailure(error: any, _response?: any): void {
+    this.fatal = true
+    this.loading = false
+    this.emit('fetch', { error })
+  }
+
+  onSave(): Promise<number> {
+    return new Promise((resolve) => {
+      if (this.saving) return resolve(Collection.REQUEST_SKIP)
+      this.saving = true
+      resolve(Collection.REQUEST_CONTINUE)
+    })
+  }
+
+  onSaveSuccess(response: any): void {
+    this.saving = false
+    this.fatal = false
+    this.emit('save', { error: null })
+  }
+
+  onSaveFailure(error: any, _response?: any): void {
+    this.fatal = true
+    this.saving = false
+    this.emit('save', { error })
+  }
+
+  onDelete(): Promise<number> {
+    return new Promise((resolve) => {
+      if (this.deleting) return resolve(Collection.REQUEST_SKIP)
+      this.deleting = true
+      resolve(Collection.REQUEST_CONTINUE)
+    })
+  }
+
+  onDeleteSuccess(_response: any): void {
+    const deleting = this.getDeletingModels()
+    for (const m of deleting) {
+      m.onDeleteSuccess(_response)
+    }
+    this.deleting = false
+    this.fatal = false
+    this.emit('delete', { error: null })
+  }
+
+  onDeleteFailure(error: any, _response?: any): void {
+    this.fatal = true
+    this.deleting = false
+    this.emit('delete', { error })
+  }
 
   // --- HTTP: save/delete data ---
-  getSaveData(): Record<string, any>[] { throw new Error('Not implemented') }
-  getSavingModels(): M[] { throw new Error('Not implemented') }
-  getDeletingModels(): M[] { throw new Error('Not implemented') }
-  getDeleteBody(): any { throw new Error('Not implemented') }
-  getDeleteQuery(): Record<string, any> { throw new Error('Not implemented') }
-  getDeleteQueryIdentifierKey(): string { throw new Error('Not implemented') }
-  getPaginationQuery(): Record<string, any> { throw new Error('Not implemented') }
-  getModelsFromResponse(_response: any): any { throw new Error('Not implemented') }
+
+  getSaveData(): Record<string, any>[] {
+    return this.getSavingModels().map(m => m.getSaveData())
+  }
+
+  getSavingModels(): M[] {
+    return this._models.filter(m => m.saving)
+  }
+
+  getDeletingModels(): M[] {
+    return this._models.filter(m => m.deleting)
+  }
+
+  getDeleteBody(): any {
+    if (this._options.useDeleteBody) {
+      return this.getDeletingModels().map(m => m.identifier())
+    }
+    return {}
+  }
+
+  getDeleteQuery(): Record<string, any> {
+    if (!this._options.useDeleteBody) {
+      const ids = this.getDeletingModels().map(m => m.identifier())
+      return { [this.getDeleteQueryIdentifierKey()]: ids.join(',') }
+    }
+    return {}
+  }
+
+  getDeleteQueryIdentifierKey(): string { return 'id' }
+
+  getPaginationQuery(): Record<string, any> {
+    if (this.isPaginated()) return { page: this._page }
+    return {}
+  }
+
+  getModelsFromResponse(response: any): any {
+    const data = response?.getData?.()
+    if (data?.data) return data.data // pagination wrapper
+    return data
+  }
 
   // --- HTTP: request ---
-  fetch(_options?: any): Promise<any> { throw new Error('Not implemented') }
-  save(_options?: any): Promise<any> { throw new Error('Not implemented') }
-  delete(_options?: any): Promise<any> { throw new Error('Not implemented') }
+
+  request(config: any, onRequest: () => Promise<number>, onSuccess: (r: any) => void, onFailure: (e: any, r?: any) => void): Promise<any> {
+    return new Promise((resolve, reject) => {
+      onRequest.call(this).then((status: number) => {
+        switch (status) {
+          case Collection.REQUEST_SKIP:
+            return
+          case Collection.REQUEST_REDUNDANT:
+            onSuccess.call(this, null)
+            resolve(null)
+            return
+        }
+
+        const cfg = isFunction(config) ? config() : config
+
+        new Request(cfg)
+          .send()
+          .then((response: any) => {
+            onSuccess.call(this, response)
+            resolve(response)
+          })
+          .catch((error: any) => {
+            onFailure.call(this, error, error.response)
+            reject(error)
+          })
+      }).catch(reject)
+    })
+  }
+
+  fetch(options: Record<string, any> = {}): Promise<any> {
+    const config = () => ({
+      url: options.url || this.getFetchURL(),
+      method: options.method || this._options.methods?.fetch || 'GET',
+      params: _defaults({}, options.params, this.getPaginationQuery()),
+      headers: options.headers || {},
+    })
+    return this.request(config, this.onFetch, this.onFetchSuccess, this.onFetchFailure)
+  }
+
+  save(options: Record<string, any> = {}): Promise<any> {
+    const config = () => ({
+      url: options.url || this.getSaveURL(),
+      method: options.method || this._options.methods?.save || 'POST',
+      data: options.data || this.getSaveData(),
+      headers: options.headers || {},
+    })
+    return this.request(config, this.onSave, this.onSaveSuccess, this.onSaveFailure)
+  }
+
+  delete(options: Record<string, any> = {}): Promise<any> {
+    const config = () => ({
+      url: options.url || this.getDeleteURL(),
+      method: options.method || this._options.methods?.delete || 'DELETE',
+      data: options.data || this.getDeleteBody(),
+      params: _defaults({}, options.params, this.getDeleteQuery()),
+      headers: options.headers || {},
+    })
+    return this.request(config, this.onDelete, this.onDeleteSuccess, this.onDeleteFailure)
+  }
 }
