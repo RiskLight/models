@@ -478,6 +478,10 @@ export class Model {
     return this._options
   }
 
+  setOptions(...options: Record<string, any>[]): void {
+    this._options = _defaults(this._options, ...options)
+  }
+
   // --- Clone / Serialization ---
 
   clone(): this {
@@ -504,14 +508,23 @@ export class Model {
   }
 
   getURL(route: string, parameters?: Record<string, any>): string {
-    const params = parameters || this.getRouteParameters()
-    const pattern = this.getRouteParameterPattern()
-    const regex = new RegExp(pattern instanceof RegExp ? pattern.source : pattern, 'g')
+    const resolver = this.getRouteResolver()
+    return resolver(route, parameters || this.getRouteParameters())
+  }
 
-    return route.replace(regex, (_match, key) => {
-      const value = params[key]
-      return value !== null && value !== undefined ? String(value) : ''
-    })
+  getRouteResolver(): (route: string, parameters: Record<string, any>) => string {
+    return this.getDefaultRouteResolver()
+  }
+
+  getDefaultRouteResolver(): (route: string, parameters: Record<string, any>) => string {
+    return (route: string, params: Record<string, any>) => {
+      const pattern = this.getRouteParameterPattern()
+      const regex = new RegExp(pattern instanceof RegExp ? pattern.source : pattern, 'g')
+      return route.replace(regex, (_match, key) => {
+        const value = params[key]
+        return value !== null && value !== undefined ? String(value) : ''
+      })
+    }
   }
 
   getFetchURL(): string { return this.getURL(this.getFetchRoute()) }
@@ -786,11 +799,31 @@ export class Model {
 
   // --- HTTP: FormData ---
 
-  convertObjectToFormData(data: Record<string, any>): FormData {
-    const form = new FormData()
+  convertObjectToFormData(data: Record<string, any>, form?: FormData, prefix?: string): FormData {
+    form = form || new FormData()
+
     for (const [key, value] of Object.entries(data)) {
-      form.append(key, value)
+      const formKey = prefix ? `${prefix}[${key}]` : key
+
+      if (value === null || value === undefined) {
+        form.append(formKey, '')
+      } else if (value instanceof File || value instanceof Blob) {
+        form.append(formKey, value)
+      } else if (Array.isArray(value)) {
+        value.forEach((item, i) => {
+          if (typeof item === 'object' && item !== null) {
+            this.convertObjectToFormData(item, form, `${formKey}[${i}]`)
+          } else {
+            form!.append(`${formKey}[${i}]`, String(item))
+          }
+        })
+      } else if (typeof value === 'object') {
+        this.convertObjectToFormData(value, form, formKey)
+      } else {
+        form.append(formKey, String(value))
+      }
     }
+
     return form
   }
 

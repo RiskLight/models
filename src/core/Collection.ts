@@ -344,6 +344,31 @@ export class Collection<M extends Model = Model> {
     return this._models.map(m => m.toJSON())
   }
 
+  clone(): Collection<M> {
+    const Constructor = this.constructor as any
+    const clone = new Constructor([], { ...this._options }, { ...this._attributes })
+    clone._models = this._models.slice()
+    clone._page = this._page
+    clone._lastPage = this._lastPage
+    return clone
+  }
+
+  isModel(candidate: any): candidate is M {
+    return candidate instanceof Model
+  }
+
+  hasModelInRegistry(model: M): boolean {
+    return this._registry.has(model._uid)
+  }
+
+  addModelToRegistry(model: M): void {
+    this._registry.add(model._uid)
+  }
+
+  removeModelFromRegistry(model: M): void {
+    this._registry.delete(model._uid)
+  }
+
   // --- HTTP: route resolution ---
 
   getRoute(key: string, fallback?: string): string {
@@ -417,10 +442,26 @@ export class Collection<M extends Model = Model> {
   }
 
   onSave(): Promise<number> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       if (this.saving) return resolve(Collection.REQUEST_SKIP)
-      this.saving = true
-      resolve(Collection.REQUEST_CONTINUE)
+
+      // Validate each model and call model.onSave() to set saving=true
+      let valid = true
+      const tasks = this._models.map(m =>
+        m.onSave().catch((error: any) => {
+          valid = false
+          return error
+        })
+      )
+
+      Promise.all(tasks).then(() => {
+        if (!valid) {
+          this.saving = false
+          return reject(this.getErrors())
+        }
+        this.saving = true
+        resolve(Collection.REQUEST_CONTINUE)
+      })
     })
   }
 
