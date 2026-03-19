@@ -177,6 +177,11 @@ export class Model {
     this._attributes[key] = value
 
     if (!isEqual(previous, value)) {
+      // Auto-validate on change if enabled
+      if (this.getOption('validateOnChange')) {
+        this.validate(key)
+      }
+
       this._notifySignal(key, value, previous)
       this.emit('change', { attribute: key, value, previous })
     }
