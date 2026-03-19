@@ -840,4 +840,32 @@ export class Model {
   get collections(): any[] {
     return this._collections
   }
+
+  // --- Compat: vue-mc API ---
+
+  get $class(): string {
+    return this.constructor.name
+  }
+
+  get attributes(): Record<string, any> {
+    return { ...this._attributes }
+  }
+
+  toString(): string {
+    return `<${this.constructor.name} #${this._uid}>`
+  }
+
+  setAttributeErrors(attribute: string, errors: string | string[]): void {
+    this._errors[attribute] = errors
+  }
+
+  getErrors(): Record<string, any> {
+    return this._errors
+  }
+
+  getValidateRules(attribute: string): any[] {
+    const rules = this._cache.validation || this.validation()
+    const rule = rules[attribute]
+    return rule ? [rule] : []
+  }
 }
