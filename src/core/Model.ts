@@ -625,7 +625,25 @@ export class Model {
     this.clearErrors()
     if (response) {
       const data = response.getData?.()
-      if (data) this.update(data)
+      if (isPlainObject(data)) {
+        const newId = this.parseIdentifier(data)
+        const currentId = this.identifier()
+
+        if (this.isValidIdentifier(newId)) {
+          if (this.shouldAllowIdentifierOverwrite(currentId, newId)) {
+            this.assign(data)
+          } else {
+            // Update all except identifier
+            const idKey = this.getOption('identifier')
+            const { [idKey]: _id, ...rest } = data
+            for (const [k, v] of Object.entries(rest)) {
+              this._attributes[k] = v
+            }
+          }
+        } else {
+          this.assign(data)
+        }
+      }
     }
     this.saving = false
     this.fatal = false
@@ -766,6 +784,22 @@ export class Model {
     if (isPlainObject(data)) {
       this.assign(data)
     }
+  }
+
+  // --- Identifier logic ---
+
+  parseIdentifier(data: Record<string, any>): any {
+    return data[this.getOption('identifier')]
+  }
+
+  isValidIdentifier(id: any): boolean {
+    return id !== null && id !== undefined && id !== '' && id !== 0
+  }
+
+  shouldAllowIdentifierOverwrite(currentId: any, newId: any): boolean {
+    if (this.getOption('overwriteIdentifier')) return true
+    // Allow if current is "new" (no valid id)
+    return !this.isValidIdentifier(currentId)
   }
 
   // --- Mutations ---
