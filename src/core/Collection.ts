@@ -48,6 +48,8 @@ export class Collection<M extends Model = Model> {
   routes(): Record<string, string> { return {} }
   options(): Record<string, any> { return {} }
   boot(): void {}
+  onAdd(_model: M): void {}
+  onRemove(_model: M): void {}
 
   getDefaultOptions(): Record<string, any> {
     return {
@@ -76,7 +78,10 @@ export class Collection<M extends Model = Model> {
     }
     m.registerCollection(this)
     this._models.push(m)
-    if (emitEvent) this.emit('add', { model: m })
+    if (emitEvent) {
+      this.onAdd(m)
+      this.emit('add', { model: m })
+    }
     return m
   }
 
@@ -109,6 +114,7 @@ export class Collection<M extends Model = Model> {
     if (idx !== -1) {
       this._models.splice(idx, 1)
       model.unregisterCollection(this)
+      this.onRemove(model)
       this.emit('remove', { model })
     }
     return model

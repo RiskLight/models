@@ -444,7 +444,7 @@ export class Model {
       if (!rule) continue
 
       const value = this._attributes[key]
-      const result = rule.validate ? rule.validate(value) : true
+      const result = rule.validate ? rule.validate(value, key, this) : true
 
       if (result !== true) {
         if (this.getOption('useFirstErrorOnly')) {

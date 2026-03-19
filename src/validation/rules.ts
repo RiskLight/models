@@ -6,20 +6,20 @@ import { z } from 'zod'
 // --- Rule class ---
 
 export class Rule {
-  private _test: (value: any) => boolean
+  _test: (value: any, attribute?: string, model?: any) => boolean
   private _message: string
 
-  constructor(test: (value: any) => boolean, message: string = 'Invalid value') {
+  constructor(test: (value: any, attribute?: string, model?: any) => boolean, message: string = 'Invalid value') {
     this._test = test
     this._message = message
   }
 
-  test(value: any): boolean {
-    return this._test(value)
+  test(value: any, attribute?: string, model?: any): boolean {
+    return this._test(value, attribute, model)
   }
 
-  validate(value: any): true | string {
-    return this._test(value) ? true : this._message
+  validate(value: any, attribute?: string, model?: any): true | string {
+    return this._test(value, attribute, model) ? true : this._message
   }
 
   and(other: Rule): Rule {
@@ -342,12 +342,9 @@ export function not(...values: any[]): Rule {
 
 // --- Same attribute (needs model context, simplified) ---
 
-export function same(_attribute: string): Rule {
-  // In vue-mc this compares with another attribute on the model.
-  // Here we return a rule that needs to be evaluated in model context.
-  // The model's validate method should handle this.
+export function same(otherAttribute: string): Rule {
   return new Rule(
-    () => true, // placeholder — needs model context
-    `Must be the same as ${_attribute}`,
+    (v, _attr, model) => model ? v === model.get(otherAttribute) : true,
+    `Must be the same as ${otherAttribute}`,
   )
 }

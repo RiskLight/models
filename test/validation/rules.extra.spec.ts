@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   after, before, date, dateformat, ascii, match,
   isnil, isnull, isblank, negative, positive, not, equal, equals,
+  same, required, Model,
 } from '../../src'
 
 describe('Validation: date rules', () => {
@@ -92,5 +93,26 @@ describe('Validation: aliases', () => {
   it('equal is alias for equals', () => {
     expect(equal('foo').test('foo')).toBe(true)
     expect(equal('foo').test('bar')).toBe(false)
+  })
+})
+
+describe('Validation: same(attribute)', () => {
+  it('validates that two attributes match', async () => {
+    class Form extends Model {
+      defaults() { return { password: '', password_confirmation: '' } }
+      validation() {
+        return {
+          password: required,
+          password_confirmation: same('password'),
+        }
+      }
+    }
+
+    const form = new Form({ password: 'secret', password_confirmation: 'secret' })
+    expect(await form.validate()).toBe(true)
+
+    form.password_confirmation = 'different'
+    expect(await form.validate()).toBe(false)
+    expect(form.errors).toHaveProperty('password_confirmation')
   })
 })
