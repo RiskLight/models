@@ -1,9 +1,9 @@
 // @risklight/models — Collection
 
 import { defaults as _defaults, isEmpty, isFunction } from 'lodash-es'
-import { Model } from './Model'
-import { Request } from './Request'
-import { ProxyResponse } from './ProxyResponse'
+import { Model } from './Model.js'
+import { Request } from './Request.js'
+import { ProxyResponse } from './ProxyResponse.js'
 
 type Listener = (context: Record<string, any>) => void
 

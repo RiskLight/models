@@ -2,8 +2,8 @@
 
 import axios from 'axios'
 import type { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
-import { Response } from './Response'
-import { RequestError } from './errors'
+import { Response } from './Response.js'
+import { RequestError } from './errors.js'
 
 export class Request {
   config: AxiosRequestConfig

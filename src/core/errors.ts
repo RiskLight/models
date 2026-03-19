@@ -1,7 +1,7 @@
 // @risklight/models — Error classes
 // TDD: implement to pass test/core/Request.spec.ts
 
-import { Response } from './Response'
+import { Response } from './Response.js'
 
 export class RequestError extends Error {
   private error: any

@@ -2,7 +2,7 @@
 // Creates shallowRef per attribute, subscribes to model signals.
 
 import { shallowRef } from 'vue'
-import { Model } from '../core/Model'
+import { Model } from '../core/Model.js'
 
 export function useModel<T extends typeof Model>(ModelClass: T): T {
   return class extends (ModelClass as any) {

@@ -1,7 +1,7 @@
 // @risklight/models — Model
 
 import { get, set as _set, defaults as _defaults, pick, flow, castArray, isFunction, isPlainObject, isEmpty, isUndefined, isEqual } from 'lodash-es'
-import { Request } from './Request'
+import { Request } from './Request.js'
 
 type Listener = (context: Record<string, any>) => void
 type Mutation = (value: any) => any
