@@ -20,6 +20,7 @@ export class Model {
   _options: Record<string, any> = {}
   _errors: Record<string, any> = {}
   _collections: any[] = []
+  _cache: Record<string, any> = {}
   _uid: string
 
   // --- HTTP: state flags ---
@@ -43,6 +44,9 @@ export class Model {
     if (collection) {
       this.registerCollection(collection)
     }
+
+    // Memoize expensive methods
+    this.memoize()
 
     // Compile mutations
     this.compileMutators()
@@ -128,6 +132,12 @@ export class Model {
   options(): Record<string, any> { return {} }
   boot(): void {}
 
+  memoize(): void {
+    this._cache.defaults = this.defaults()
+    this._cache.validation = this.validation()
+    this._cache.routes = this.routes()
+  }
+
   getDefaultOptions(): Record<string, any> {
     return {
       identifier: 'id',
@@ -160,7 +170,7 @@ export class Model {
     const debug = this.getOption('debug')
 
     // Warn on undeclared attributes
-    if (debug && !(key in this.defaults())) {
+    if (debug && !(key in (this._cache.defaults || this.defaults()))) {
       const msg = `[models] Undeclared "${key}" on ${this.constructor.name}`
       if (debug === 'strict') {
         throw new Error(msg)
@@ -271,7 +281,7 @@ export class Model {
   }
 
   unset(attribute?: string | string[]): void {
-    const defs = this.defaults()
+    const defs = this._cache.defaults || this.defaults()
     if (isUndefined(attribute)) {
       for (const key of Object.keys(this._attributes)) {
         this._attributes[key] = defs[key]
@@ -297,7 +307,7 @@ export class Model {
   }
 
   assign(attributes: Record<string, any>): void {
-    const defs = this.defaults()
+    const defs = this._cache.defaults || this.defaults()
     this._attributes = { ...defs, ...attributes }
     this._reference = { ...this._attributes }
   }
@@ -465,7 +475,7 @@ export class Model {
   // --- HTTP: route resolution ---
 
   getRoute(key: string, fallback?: string): string {
-    return this.routes()[key] || fallback || ''
+    return (this._cache.routes || this.routes())[key] || fallback || ''
   }
 
   getRouteParameters(): Record<string, any> {
@@ -610,7 +620,14 @@ export class Model {
     this.emit('save.success', { error: null })
   }
 
-  onSaveFailure(error: any, _response?: any): void {
+  onSaveFailure(error: any, response?: any): void {
+    if (this.isBackendValidationError(error)) {
+      const validationErrors = response?.getValidationErrors?.() || error?.response?.getValidationErrors?.()
+      if (validationErrors) {
+        this.setErrors(validationErrors)
+      }
+    }
+
     this.fatal = true
     this.saving = false
     this.emit('save.failure', { error })
