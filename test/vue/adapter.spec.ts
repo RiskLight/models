@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
+import { isReactive } from 'vue'
 import { Model } from '../../src'
 
 // Import Vue adapter — patches Model prototype
@@ -13,24 +14,24 @@ class UserWithRoutes extends Model {
   routes() { return { fetch: '/api/users/{id}' } }
 }
 
-describe('Vue adapter: auto-reactivity via import', () => {
-  it('model gets _vueState after construction', () => {
+describe('Vue adapter: reactive _attributes', () => {
+  it('_attributes is reactive after construction', () => {
     const user = new User({ name: 'John' })
-    expect(user._vueState).toBeDefined()
-    expect(user._vueState.name).toBe('John')
+    expect(isReactive(user._attributes)).toBe(true)
   })
 
-  it('_vueState updates when attribute changes', () => {
+  it('attribute changes are reactive', () => {
     const user = new User()
     user.name = 'John'
-    expect(user._vueState.name).toBe('John')
+    expect(user._attributes.name).toBe('John')
+    expect(user.name).toBe('John')
   })
 
-  it('_vueState updates on assign', () => {
+  it('assign updates reactive attributes', () => {
     const user = new User()
     user.assign({ name: 'Jane', email: 'jane@t.com' })
-    expect(user._vueState.name).toBe('Jane')
-    expect(user._vueState.email).toBe('jane@t.com')
+    expect(user.name).toBe('Jane')
+    expect(user._attributes.name).toBe('Jane')
   })
 
   it('preserves all Model methods', () => {
