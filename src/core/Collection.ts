@@ -127,6 +127,10 @@ export class Collection<M extends Model = Model> {
     return this.getOption('validationErrorStatus')
   }
 
+  createRequest(config: any): Request {
+    return new Request(config)
+  }
+
   // --- Models array ---
   get models(): M[] { return this._models }
   get length(): number { return this._models.length }
@@ -667,7 +671,7 @@ export class Collection<M extends Model = Model> {
 
         const cfg = isFunction(config) ? config() : config
 
-        new Request(cfg)
+        this.createRequest(cfg)
           .send()
           .then((response: any) => {
             onSuccess.call(this, response)

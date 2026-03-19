@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { Model } from '../../src'
-import { useModel } from '../../src/vue'
+
+// Import Vue adapter — patches Model prototype
+import '../../src/vue'
 
 class User extends Model {
   defaults() { return { name: '', email: '' } }
@@ -11,41 +13,28 @@ class UserWithRoutes extends Model {
   routes() { return { fetch: '/api/users/{id}' } }
 }
 
-describe('Vue adapter: useModel', () => {
-  it('returns a class that extends the given Model', () => {
-    const VueUser = useModel(User)
-    const user = new VueUser({ name: 'John' })
-
-    expect(user.name).toBe('John')
-    expect(user).toBeInstanceOf(User)
+describe('Vue adapter: auto-reactivity via import', () => {
+  it('model gets _vueState after construction', () => {
+    const user = new User({ name: 'John' })
+    expect(user._vueState).toBeDefined()
+    expect(user._vueState.name).toBe('John')
   })
 
-  it('attribute changes trigger Vue reactivity', () => {
-    const VueUser = useModel(User)
-    const user = new VueUser()
-
-    expect(user._refs).toBeDefined()
-    expect(user._refs.name).toBeDefined()
-
+  it('_vueState updates when attribute changes', () => {
+    const user = new User()
     user.name = 'John'
-    expect(user._refs.name.value).toBe('John')
+    expect(user._vueState.name).toBe('John')
   })
 
-  it('handles undeclared attributes in Vue context', () => {
-    const VueUser = useModel(User)
-    const user = new VueUser()
-    vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    ;(user as any).discount = 5
-    expect(user._refs.discount).toBeDefined()
-    expect(user._refs.discount.value).toBe(5)
-
-    vi.restoreAllMocks()
+  it('_vueState updates on assign', () => {
+    const user = new User()
+    user.assign({ name: 'Jane', email: 'jane@t.com' })
+    expect(user._vueState.name).toBe('Jane')
+    expect(user._vueState.email).toBe('jane@t.com')
   })
 
   it('preserves all Model methods', () => {
-    const VueUser = useModel(UserWithRoutes)
-    const user = new VueUser({ id: 1, name: 'John' })
+    const user = new UserWithRoutes({ id: 1, name: 'John' })
 
     expect(user.isNew()).toBe(false)
     expect(user.identifier()).toBe(1)
@@ -56,5 +45,11 @@ describe('Vue adapter: useModel', () => {
     expect(user.changed()).toEqual(['name'])
     user.reset()
     expect(user.name).toBe('John')
+  })
+
+  it('instanceof still works', () => {
+    const user = new User()
+    expect(user).toBeInstanceOf(User)
+    expect(user).toBeInstanceOf(Model)
   })
 })
