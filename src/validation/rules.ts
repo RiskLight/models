@@ -41,6 +41,14 @@ export class Rule {
   format(message: string): Rule {
     return new Rule(this._test, message)
   }
+
+  copy(): Rule {
+    return new Rule(this._test, this._message)
+  }
+
+  get message(): string {
+    return this._message
+  }
 }
 
 // --- Helpers ---
@@ -51,6 +59,10 @@ function zodTest(schema: z.ZodType): (value: any) => boolean {
 
 function isString(v: any): v is string {
   return typeof v === 'string'
+}
+
+function deburr(str: string): string {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
 
 // --- Presence rules ---
@@ -132,12 +144,12 @@ export const iso8601 = new Rule(
 )
 
 export const alpha = new Rule(
-  (v) => isString(v) && /^[a-zA-Z]+$/.test(v),
+  (v) => isString(v) && /^[a-zA-Z]+$/.test(deburr(v)),
   'Must contain only letters',
 )
 
 export const alphanumeric = new Rule(
-  (v) => isString(v) && /^[a-zA-Z0-9]+$/.test(v),
+  (v) => isString(v) && /^[a-zA-Z0-9]+$/.test(deburr(v)),
   'Must contain only letters and numbers',
 )
 
