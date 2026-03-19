@@ -1,0 +1,45 @@
+{
+  "name": "@risklight/models",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Framework-agnostic Model/Collection with Proxy-based reactivity and Zod validation",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./vue": {
+      "import": "./dist/vue/index.js",
+      "types": "./dist/vue/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/react/index.js",
+      "types": "./dist/react/index.d.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "axios": "^1.13.0",
+    "lodash-es": "^4.17.21",
+    "zod": "^4.3.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.0",
+    "typescript": "^5.8.0"
+  },
+  "peerDependencies": {
+    "vue": "^3.0.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vue": { "optional": true },
+    "react": { "optional": true }
+  },
+  "license": "MIT"
+}
