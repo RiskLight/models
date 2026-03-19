@@ -140,6 +140,23 @@ export class Collection<M extends Model = Model> {
     for (const m of this._models) m.clearErrors()
   }
 
+  setErrors(errors: any[] | Record<string, any>): void {
+    if (Array.isArray(errors)) {
+      // Array: errors[i] applies to models[i]
+      errors.forEach((err, i) => {
+        if (this._models[i]) this._models[i].setErrors(err || {})
+      })
+    } else {
+      // Object: keyed by model identifier
+      for (const m of this._models) {
+        const id = m.identifier()
+        if (id != null && errors[id]) {
+          m.setErrors(errors[id])
+        }
+      }
+    }
+  }
+
   replace(models: M | M[]): void {
     this._models = []
     const arr = Array.isArray(models) ? models : [models]
@@ -360,13 +377,33 @@ export class Collection<M extends Model = Model> {
   }
 
   onFetchSuccess(response: any): void {
+    const data = response?.getData?.()
     const models = this.getModelsFromResponse(response)
+
     if (Array.isArray(models)) {
       this.replace(models.map((attrs: any) => this.createModel(attrs)))
     }
+
+    // Apply pagination metadata if present
+    if (this.isPaginated() && data && typeof data === 'object' && !Array.isArray(data)) {
+      this.applyPagination(data)
+    }
+
     this.loading = false
     this.fatal = false
     this.emit('fetch', { error: null })
+  }
+
+  applyPagination(data: Record<string, any>): void {
+    const currentPage = data.current_page ?? this._page
+    const lastPage = data.last_page ?? data.total_pages
+
+    if (currentPage != null) {
+      this._page = currentPage
+    }
+    if (lastPage != null) {
+      this._lastPage = currentPage >= lastPage
+    }
   }
 
   onFetchFailure(error: any, _response?: any): void {
