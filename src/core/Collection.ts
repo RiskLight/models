@@ -51,7 +51,7 @@ export class Collection<M extends Model = Model> {
   getDefaultOptions(): Record<string, any> {
     return {
       useDeleteBody: true,
-      routeParameterPattern: /\{([^}]+)\}/,
+      routeParameterPattern: /\{([^}]+)}/,
       methods: {
         fetch: 'GET',
         save: 'POST',
@@ -323,7 +323,7 @@ export class Collection<M extends Model = Model> {
   }
 
   getRouteParameterPattern(): RegExp | string {
-    return this._options.routeParameterPattern || /\{([^}]+)\}/
+    return this._options.routeParameterPattern || /\{([^}]+)}/
   }
 
   getURL(route: string, parameters?: Record<string, any>): string {
