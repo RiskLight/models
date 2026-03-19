@@ -242,3 +242,112 @@ export function equals(value: any): Rule {
     `Must equal ${value}`,
   )
 }
+
+// Alias for equals (vue-mc compat)
+export const equal = equals
+
+// --- Date rules ---
+
+export function after(date: string | Date): Rule {
+  const d = new Date(date)
+  return new Rule(
+    (v) => new Date(v) > d,
+    `Must be after ${d.toISOString()}`,
+  )
+}
+
+export function before(date: string | Date): Rule {
+  const d = new Date(date)
+  return new Rule(
+    (v) => new Date(v) < d,
+    `Must be before ${d.toISOString()}`,
+  )
+}
+
+export const date = new Rule(
+  (v) => !isNaN(new Date(v).getTime()),
+  'Must be a valid date',
+)
+
+export function dateformat(format: string): Rule {
+  // Basic format check — validates common patterns like YYYY-MM-DD
+  return new Rule(
+    (v) => {
+      if (!isString(v)) return false
+      const pattern = format
+        .replace('YYYY', '\\d{4}')
+        .replace('MM', '\\d{2}')
+        .replace('DD', '\\d{2}')
+        .replace('HH', '\\d{2}')
+        .replace('mm', '\\d{2}')
+        .replace('ss', '\\d{2}')
+      return new RegExp(`^${pattern}$`).test(v)
+    },
+    `Must match date format ${format}`,
+  )
+}
+
+// --- String rules ---
+
+export const ascii = new Rule(
+  // eslint-disable-next-line no-control-regex
+  (v) => isString(v) && /^[\u0000-\u007F]*$/.test(v),
+  'Must contain only ASCII characters',
+)
+
+export function match(pattern: RegExp): Rule {
+  return new Rule(
+    (v) => isString(v) && pattern.test(v),
+    `Must match pattern ${pattern}`,
+  )
+}
+
+// --- Nullness rules ---
+
+export const isnil = new Rule(
+  (v) => v === null || v === undefined,
+  'Must be nil',
+)
+
+export const isnull = new Rule(
+  (v) => v === null,
+  'Must be null',
+)
+
+export const isblank = new Rule(
+  (v) => v === null || v === undefined || (isString(v) && v.trim() === ''),
+  'Must be blank',
+)
+
+// --- Number rules ---
+
+export const negative = new Rule(
+  (v) => typeof v === 'number' && v < 0,
+  'Must be negative',
+)
+
+export const positive = new Rule(
+  (v) => typeof v === 'number' && v > 0,
+  'Must be positive',
+)
+
+// --- Exclusion ---
+
+export function not(...values: any[]): Rule {
+  return new Rule(
+    (v) => !values.includes(v),
+    `Must not be one of: ${values.join(', ')}`,
+  )
+}
+
+// --- Same attribute (needs model context, simplified) ---
+
+export function same(_attribute: string): Rule {
+  // In vue-mc this compares with another attribute on the model.
+  // Here we return a rule that needs to be evaluated in model context.
+  // The model's validate method should handle this.
+  return new Rule(
+    () => true, // placeholder — needs model context
+    `Must be the same as ${_attribute}`,
+  )
+}
