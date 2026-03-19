@@ -366,18 +366,43 @@ export class Model {
 
   async validate(attributes?: string | string[]): Promise<boolean> {
     const schema = this.schema()
-    const rules = this.validation()
+    const rules = this._cache.validation || this.validation()
+
+    let selfValid = true
 
     // schema() takes priority over validation()
     if (schema) {
-      return this._validateWithZod(schema, attributes)
+      selfValid = await this._validateWithZod(schema, attributes)
+    } else if (!isEmpty(rules)) {
+      selfValid = await this._validateWithRules(rules, attributes)
     }
 
-    if (!isEmpty(rules)) {
-      return this._validateWithRules(rules, attributes)
+    // Recursively validate nested models/collections
+    if (this.getOption('validateRecursively') && !attributes) {
+      const nestedValid = await this._validateNested()
+      return selfValid && nestedValid
     }
 
-    return true
+    return selfValid
+  }
+
+  private async _validateNested(): Promise<boolean> {
+    let allValid = true
+
+    for (const value of Object.values(this._attributes)) {
+      if (value instanceof Model) {
+        const valid = await value.validate()
+        if (!valid) allValid = false
+      } else if (value && typeof value === 'object' && '_models' in value && Array.isArray(value._models)) {
+        // Collection
+        const results = await value.validate()
+        if (Array.isArray(results) && results.some((r: boolean) => !r)) {
+          allValid = false
+        }
+      }
+    }
+
+    return allValid
   }
 
   private async _validateWithZod(schema: any, attributes?: string | string[]): Promise<boolean> {

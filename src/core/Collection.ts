@@ -3,6 +3,7 @@
 import { defaults as _defaults, isEmpty, isFunction, castArray } from 'lodash-es'
 import { Model } from './Model'
 import { Request } from './Request'
+import { ProxyResponse } from './ProxyResponse'
 
 type Listener = (context: Record<string, any>) => void
 
@@ -377,6 +378,25 @@ export class Collection<M extends Model = Model> {
   }
 
   onSaveSuccess(response: any): void {
+    const saved = response ? this.getModelsFromResponse(response) : null
+    const saving = this.getSavingModels()
+
+    if (!saved || isEmpty(saved)) {
+      // Empty response — just sync all saving models
+      saving.forEach(m => {
+        m.saving = false
+        m.sync()
+      })
+    } else if (Array.isArray(saved)) {
+      // Pair response data with saving models (order matters)
+      const headers = response?.getHeaders?.() || {}
+      saved.forEach((data: any, index: number) => {
+        if (saving[index]) {
+          saving[index].onSaveSuccess(new ProxyResponse(200, data, headers))
+        }
+      })
+    }
+
     this.saving = false
     this.fatal = false
     this.emit('save', { error: null })
@@ -461,6 +481,7 @@ export class Collection<M extends Model = Model> {
       onRequest.call(this).then((status: number) => {
         switch (status) {
           case Collection.REQUEST_SKIP:
+            resolve(null)
             return
           case Collection.REQUEST_REDUNDANT:
             onSuccess.call(this, null)
