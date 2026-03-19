@@ -30,6 +30,7 @@
     "zod": "^4.3.0"
   },
   "devDependencies": {
+    "@types/lodash-es": "^4.17.12",
     "typescript": "^5.8.0",
     "vitest": "^4.1.0",
     "vue": "^3.5.30"

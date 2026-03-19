@@ -735,9 +735,11 @@ export class Model {
 
   compileMutators(): void {
     const mutations = this.mutations()
-    this._mutations = mapValues(mutations, (m: Mutation | Mutation[]) => {
-      return Array.isArray(m) ? flow(m) : m
-    })
+    const compiled: Record<string, Mutation> = {}
+    for (const [key, m] of Object.entries(mutations)) {
+      compiled[key] = Array.isArray(m) ? flow(m) : m
+    }
+    this._mutations = compiled
   }
 
   mutated(attribute: string, value: any): any {
