@@ -2,6 +2,7 @@
 // Each rule backed by Zod or simple JS. Chaining via .and()/.or()/.format()
 
 import { z } from 'zod'
+import { getMessage } from './messages.js'
 
 // --- Rule class ---
 
@@ -69,99 +70,84 @@ function deburr(str: string): string {
 
 export const required = new Rule(
   (v) => v !== null && v !== undefined && v !== '',
-  'Value is required',
+  getMessage('required'),
 )
 
 export const defined = new Rule(
   (v) => v !== undefined,
-  'Value must be defined',
+  getMessage('defined'),
 )
 
 export const empty = new Rule(
   (v) => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0),
-  'Value must be empty',
+  getMessage('empty'),
 )
 
 // --- Type rules ---
 
 export const integer = new Rule(
   (v) => typeof v === 'number' && Number.isInteger(v),
-  'Must be an integer',
+  getMessage('integer'),
 )
 
 export const numeric = new Rule(
   (v) => typeof v === 'number' || (isString(v) && v !== '' && !isNaN(Number(v))),
-  'Must be numeric',
+  getMessage('numeric'),
 )
 
 const booleanRule = new Rule(
   (v) => typeof v === 'boolean',
-  'Must be a boolean',
+  getMessage('boolean'),
 )
 export { booleanRule as boolean }
 
 const stringRule = new Rule(
   (v) => isString(v),
-  'Must be a string',
+  getMessage('string'),
 )
 export { stringRule as string }
 
 export const array = new Rule(
   (v) => Array.isArray(v),
-  'Must be an array',
+  getMessage('array'),
 )
 
 export const object = new Rule(
   (v) => v !== null && typeof v === 'object' && !Array.isArray(v),
-  'Must be an object',
+  getMessage('object'),
 )
 
 // --- Format rules (Zod-backed where possible) ---
 
-export const email = new Rule(
-  zodTest(z.string().email()),
-  'Must be a valid email',
-)
-
-export const url = new Rule(
-  zodTest(z.string().url()),
-  'Must be a valid URL',
-)
-
-export const uuid = new Rule(
-  zodTest(z.string().uuid()),
-  'Must be a valid UUID',
-)
+export const email = new Rule(zodTest(z.string().email()), getMessage('email'))
+export const url = new Rule(zodTest(z.string().url()), getMessage('url'))
+export const uuid = new Rule(zodTest(z.string().uuid()), getMessage('uuid'))
 
 export const ip = new Rule(
   (v) => isString(v) && (z.string().ipv4().safeParse(v).success || z.string().ipv6().safeParse(v).success),
-  'Must be a valid IP',
+  getMessage('ip'),
 )
 
-export const iso8601 = new Rule(
-  zodTest(z.string().datetime()),
-  'Must be a valid ISO 8601 date',
-)
+export const iso8601 = new Rule(zodTest(z.string().datetime()), getMessage('iso8601'))
 
 export const alpha = new Rule(
   (v) => isString(v) && /^[a-zA-Z]+$/.test(deburr(v)),
-  'Must contain only letters',
+  getMessage('alpha'),
 )
 
 export const alphanumeric = new Rule(
   (v) => isString(v) && /^[a-zA-Z0-9]+$/.test(deburr(v)),
-  'Must contain only letters and numbers',
+  getMessage('alphanumeric'),
 )
 
 export const base64 = new Rule(
   (v) => isString(v) && /^[A-Za-z0-9+/]*={0,2}$/.test(v) && v.length % 4 === 0,
-  'Must be valid base64',
+  getMessage('base64'),
 )
 
 export const creditcard = new Rule(
   (v) => {
     if (!isString(v) || !/^\d{13,19}$/.test(v)) return false
-    // Luhn algorithm
     let sum = 0
     let alt = false
     for (let i = v.length - 1; i >= 0; i--) {
@@ -175,7 +161,7 @@ export const creditcard = new Rule(
     }
     return sum % 10 === 0
   },
-  'Must be a valid credit card number',
+  getMessage('creditcard'),
 )
 
 export const json = new Rule(
@@ -183,58 +169,40 @@ export const json = new Rule(
     if (!isString(v)) return false
     try { JSON.parse(v); return true } catch { return false }
   },
-  'Must be valid JSON',
+  getMessage('json'),
 )
 
 // --- Comparison rules ---
 
-export function between(min: number, max: number, _inclusive?: boolean): Rule {
+export function between(minVal: number, maxVal: number, _inclusive?: boolean): Rule {
   return new Rule(
-    (v) => typeof v === 'number' && v >= min && v <= max,
-    `Must be between ${min} and ${max}`,
+    (v) => typeof v === 'number' && v >= minVal && v <= maxVal,
+    getMessage('between', minVal, maxVal),
   )
 }
 
 export function min(n: number): Rule {
-  return new Rule(
-    (v) => typeof v === 'number' && v >= n,
-    `Must be at least ${n}`,
-  )
+  return new Rule((v) => typeof v === 'number' && v >= n, getMessage('min', n))
 }
 
 export function max(n: number): Rule {
-  return new Rule(
-    (v) => typeof v === 'number' && v <= n,
-    `Must be at most ${n}`,
-  )
+  return new Rule((v) => typeof v === 'number' && v <= n, getMessage('max', n))
 }
 
 export function gt(n: number): Rule {
-  return new Rule(
-    (v) => typeof v === 'number' && v > n,
-    `Must be greater than ${n}`,
-  )
+  return new Rule((v) => typeof v === 'number' && v > n, getMessage('gt', n))
 }
 
 export function gte(n: number): Rule {
-  return new Rule(
-    (v) => typeof v === 'number' && v >= n,
-    `Must be greater than or equal to ${n}`,
-  )
+  return new Rule((v) => typeof v === 'number' && v >= n, getMessage('gte', n))
 }
 
 export function lt(n: number): Rule {
-  return new Rule(
-    (v) => typeof v === 'number' && v < n,
-    `Must be less than ${n}`,
-  )
+  return new Rule((v) => typeof v === 'number' && v < n, getMessage('lt', n))
 }
 
 export function lte(n: number): Rule {
-  return new Rule(
-    (v) => typeof v === 'number' && v <= n,
-    `Must be less than or equal to ${n}`,
-  )
+  return new Rule((v) => typeof v === 'number' && v <= n, getMessage('lte', n))
 }
 
 export function length(minLen: number, maxLen?: number): Rule {
@@ -244,45 +212,34 @@ export function length(minLen: number, maxLen?: number): Rule {
       if (maxLen !== undefined) return len >= minLen && len <= maxLen
       return len >= minLen
     },
-    maxLen !== undefined ? `Length must be between ${minLen} and ${maxLen}` : `Length must be at least ${minLen}`,
+    getMessage('length', minLen, maxLen ?? ''),
   )
 }
 
 export function equals(value: any): Rule {
-  return new Rule(
-    (v) => v === value,
-    `Must equal ${value}`,
-  )
+  return new Rule((v) => v === value, getMessage('equals', value))
 }
 
-// Alias for equals (vue-mc compat)
 export const equal = equals
 
 // --- Date rules ---
 
-export function after(date: string | Date): Rule {
-  const d = new Date(date)
-  return new Rule(
-    (v) => new Date(v) > d,
-    `Must be after ${d.toISOString()}`,
-  )
+export function after(d: string | Date): Rule {
+  const dt = new Date(d)
+  return new Rule((v) => new Date(v) > dt, getMessage('after', dt.toISOString()))
 }
 
-export function before(date: string | Date): Rule {
-  const d = new Date(date)
-  return new Rule(
-    (v) => new Date(v) < d,
-    `Must be before ${d.toISOString()}`,
-  )
+export function before(d: string | Date): Rule {
+  const dt = new Date(d)
+  return new Rule((v) => new Date(v) < dt, getMessage('before', dt.toISOString()))
 }
 
 export const date = new Rule(
   (v) => !isNaN(new Date(v).getTime()),
-  'Must be a valid date',
+  getMessage('date'),
 )
 
 export function dateformat(format: string): Rule {
-  // Basic format check — validates common patterns like YYYY-MM-DD
   return new Rule(
     (v) => {
       if (!isString(v)) return false
@@ -295,7 +252,7 @@ export function dateformat(format: string): Rule {
         .replace('ss', '\\d{2}')
       return new RegExp(`^${pattern}$`).test(v)
     },
-    `Must match date format ${format}`,
+    getMessage('dateformat', format),
   )
 }
 
@@ -304,59 +261,39 @@ export function dateformat(format: string): Rule {
 export const ascii = new Rule(
   // eslint-disable-next-line no-control-regex
   (v) => isString(v) && /^[\u0000-\u007F]*$/.test(v),
-  'Must contain only ASCII characters',
+  getMessage('ascii'),
 )
 
 export function match(pattern: RegExp): Rule {
-  return new Rule(
-    (v) => isString(v) && pattern.test(v),
-    `Must match pattern ${pattern}`,
-  )
+  return new Rule((v) => isString(v) && pattern.test(v), getMessage('match', pattern))
 }
 
 // --- Nullness rules ---
 
-export const isnil = new Rule(
-  (v) => v === null || v === undefined,
-  'Must be nil',
-)
-
-export const isnull = new Rule(
-  (v) => v === null,
-  'Must be null',
-)
+export const isnil = new Rule((v) => v === null || v === undefined, getMessage('isnil'))
+export const isnull = new Rule((v) => v === null, getMessage('isnull'))
 
 export const isblank = new Rule(
   (v) => v === null || v === undefined || (isString(v) && v.trim() === ''),
-  'Must be blank',
+  getMessage('isblank'),
 )
 
 // --- Number rules ---
 
-export const negative = new Rule(
-  (v) => typeof v === 'number' && v < 0,
-  'Must be negative',
-)
-
-export const positive = new Rule(
-  (v) => typeof v === 'number' && v > 0,
-  'Must be positive',
-)
+export const negative = new Rule((v) => typeof v === 'number' && v < 0, getMessage('negative'))
+export const positive = new Rule((v) => typeof v === 'number' && v > 0, getMessage('positive'))
 
 // --- Exclusion ---
 
 export function not(...values: any[]): Rule {
-  return new Rule(
-    (v) => !values.includes(v),
-    `Must not be one of: ${values.join(', ')}`,
-  )
+  return new Rule((v) => !values.includes(v), getMessage('not', values.join(', ')))
 }
 
-// --- Same attribute (needs model context, simplified) ---
+// --- Same attribute ---
 
 export function same(otherAttribute: string): Rule {
   return new Rule(
     (v, _attr, model) => model ? v === model.get(otherAttribute) : true,
-    `Must be the same as ${otherAttribute}`,
+    getMessage('same', otherAttribute),
   )
 }
