@@ -2,6 +2,8 @@
 
 import { get, set as _set, defaults as _defaults, pick, flow, castArray, isFunction, isPlainObject, isEmpty, isUndefined, isEqual } from 'lodash-es'
 import { Request } from './Request.js'
+import { Response } from './Response.js'
+import { RequestError, ResponseError, ValidationError } from './errors.js'
 
 type Listener = (context: Record<string, any>) => void
 type Mutation = (value: any) => any
@@ -616,7 +618,7 @@ export class Model {
       this.validate().then(() => {
         if (isEmpty(this._errors)) return resolve(Model.REQUEST_CONTINUE)
         this.saving = false
-        reject(this._errors)
+        reject(this.createValidationError(this._errors))
       })
     })
   }
@@ -796,7 +798,7 @@ export class Model {
     return id !== null && id !== undefined && id !== '' && id !== 0
   }
 
-  shouldAllowIdentifierOverwrite(currentId: any, newId: any): boolean {
+  shouldAllowIdentifierOverwrite(currentId: any, _newId: any): boolean {
     if (this.getOption('overwriteIdentifier')) return true
     // Allow if current is "new" (no valid id)
     return !this.isValidIdentifier(currentId)
@@ -889,5 +891,19 @@ export class Model {
     const rules = this._cache.validation || this.validation()
     const rule = rules[attribute]
     return rule ? [rule] : []
+  }
+
+  // --- Error factories (overridable) ---
+
+  createValidationError(errors: any, message?: string): ValidationError {
+    return new ValidationError(errors, message)
+  }
+
+  createRequestError(error: any, response: Response): RequestError {
+    return new RequestError(error?.message || 'Request failed', error, response)
+  }
+
+  createResponseError(message: string, response?: Response): ResponseError {
+    return new ResponseError(message, response)
   }
 }
