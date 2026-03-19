@@ -128,7 +128,10 @@ export const ip = new Rule(
   getMessage('ip'),
 )
 
-export const iso8601 = new Rule(zodTest(z.string().datetime()), getMessage('iso8601'))
+export const iso8601 = new Rule(
+  (v) => isString(v) && (z.string().datetime().safeParse(v).success || z.string().datetime({ offset: true }).safeParse(v).success),
+  getMessage('iso8601'),
+)
 
 export const alpha = new Rule(
   (v) => isString(v) && /^[a-zA-Z]+$/.test(deburr(v)),
