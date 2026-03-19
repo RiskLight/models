@@ -24,6 +24,7 @@ export class Model {
   _collections: any[] = []
   _cache: Record<string, any> = {}
   _uid: string
+  _wasNew: boolean = false
 
   // --- HTTP: state flags ---
   loading: boolean = false
@@ -196,6 +197,7 @@ export class Model {
 
       this._notifySignal(key, value, previous)
       this.emit('change', { attribute: key, value, previous })
+      this.emit(`change:${key}`, { value, previous })
     }
   }
 
@@ -610,6 +612,7 @@ export class Model {
       }
 
       this.saving = true
+      this._wasNew = this.isNew()
 
       if (this.getOption('mutateBeforeSave')) {
         this.mutate()
@@ -651,6 +654,7 @@ export class Model {
     this.fatal = false
     this.sync()
     this.emit('save.success', { error: null })
+    this.emit(this._wasNew ? 'create' : 'update', { error: null })
   }
 
   onSaveFailure(error: any, response?: any): void {
