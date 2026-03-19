@@ -287,7 +287,10 @@ export class Model {
 
   reset(attribute?: string | string[]): void {
     if (isUndefined(attribute)) {
-      this._attributes = { ...this._reference }
+      // Mutate in place to preserve Vue reactivity
+      for (const key of Object.keys(this._attributes)) {
+        this._attributes[key] = this._reference[key]
+      }
     } else {
       for (const key of castArray(attribute)) {
         this._attributes[key] = this._reference[key]
