@@ -130,7 +130,12 @@ export class Collection<M extends Model = Model> {
   }
 
   clearModels(): void {
+    const models = this._models.slice()
     this._models = []
+    for (const m of models) {
+      this.onRemove(m)
+      m.unregisterCollection(this)
+    }
   }
 
   clearState(): void {
@@ -162,7 +167,7 @@ export class Collection<M extends Model = Model> {
   }
 
   replace(models: M | M[]): void {
-    this._models = []
+    this.clearModels()
     const arr = Array.isArray(models) ? models : [models]
     for (const m of arr) {
       this._addModel(m, false)
@@ -284,11 +289,11 @@ export class Collection<M extends Model = Model> {
 
   // --- Pagination ---
 
-  page(page: number | boolean): this {
+  page(page: number | boolean | null): this {
     if (page === false || page === null) {
       this._page = null
     } else {
-      this._page = page as number
+      this._page = Math.max(0, Math.trunc(page as number))
     }
     return this
   }
@@ -369,6 +374,14 @@ export class Collection<M extends Model = Model> {
     this._registry.delete(model._uid)
   }
 
+  getIdentifiers(models?: M[]): any[] {
+    return (models || this._models).map(m => m.identifier()).filter(id => id != null)
+  }
+
+  getRouteParameters(): Record<string, any> {
+    return { ...this._attributes }
+  }
+
   // --- HTTP: route resolution ---
 
   getRoute(key: string, fallback?: string): string {
@@ -380,7 +393,7 @@ export class Collection<M extends Model = Model> {
   }
 
   getURL(route: string, parameters?: Record<string, any>): string {
-    const params = parameters || this._attributes
+    const params = parameters || this.getRouteParameters()
     const pattern = this.getRouteParameterPattern()
     const regex = new RegExp(pattern instanceof RegExp ? pattern.source : pattern, 'g')
     return route.replace(regex, (_match, key) => {
@@ -490,10 +503,28 @@ export class Collection<M extends Model = Model> {
     this.emit('save', { error: null })
   }
 
-  onSaveFailure(error: any, _response?: any): void {
-    this.fatal = true
+  onSaveFailure(error: any, response?: any): void {
+    // Check if backend returned validation errors
+    const status = response?.getStatus?.() || error?.response?.getStatus?.()
+    if (status === 422) {
+      this.onSaveValidationFailure(error, response)
+    } else {
+      this.onFatalSaveFailure(error, response)
+    }
+
     this.saving = false
     this.emit('save', { error })
+  }
+
+  onSaveValidationFailure(error: any, response?: any): void {
+    const errors = response?.getValidationErrors?.() || error?.response?.getValidationErrors?.()
+    if (errors) {
+      this.setErrors(errors)
+    }
+  }
+
+  onFatalSaveFailure(_error: any, _response?: any): void {
+    this.fatal = true
   }
 
   onDelete(): Promise<number> {
@@ -536,7 +567,7 @@ export class Collection<M extends Model = Model> {
 
   getDeleteBody(): any {
     if (this._options.useDeleteBody) {
-      return this.getDeletingModels().map(m => m.identifier())
+      return this.getIdentifiers(this.getDeletingModels())
     }
     return {}
   }

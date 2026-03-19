@@ -312,7 +312,18 @@ export class Model {
 
   assign(attributes: Record<string, any>): void {
     const defs = this._cache.defaults || this.defaults()
-    this._attributes = { ...defs, ...attributes }
+    const merged = { ...defs, ...attributes }
+
+    // Set each attribute through _setAttribute for signals/events
+    for (const [key, value] of Object.entries(merged)) {
+      const previous = this._attributes[key]
+      this._attributes[key] = value
+      if (!isEqual(previous, value)) {
+        this._notifySignal(key, value, previous)
+      }
+    }
+
+    // Sync reference state
     this._reference = { ...this._attributes }
   }
 
@@ -320,7 +331,7 @@ export class Model {
 
   identifier(): any {
     const key = this.getOption('identifier')
-    return this._attributes[key]
+    return this._reference[key] ?? this._attributes[key]
   }
 
   isNew(): boolean {
@@ -663,24 +674,41 @@ export class Model {
         }
       }
     }
+    // Detect create vs update
+    let action = this._wasNew ? 'create' : 'update'
+    if (response) {
+      const status = response.getStatus?.()
+      if (status === 201) action = 'create'
+    }
+
     this.saving = false
     this.fatal = false
     this.sync()
+    this.addToAllCollections()
     this.emit('save.success', { error: null })
-    this.emit(this._wasNew ? 'create' : 'update', { error: null })
+    this.emit(action, { error: null })
   }
 
   onSaveFailure(error: any, response?: any): void {
     if (this.isBackendValidationError(error)) {
-      const validationErrors = response?.getValidationErrors?.() || error?.response?.getValidationErrors?.()
-      if (validationErrors) {
-        this.setErrors(validationErrors)
-      }
+      this.onSaveValidationFailure(error, response)
+    } else {
+      this.onFatalSaveFailure(error, response)
     }
 
-    this.fatal = true
     this.saving = false
     this.emit('save.failure', { error })
+  }
+
+  onSaveValidationFailure(error: any, response?: any): void {
+    const validationErrors = response?.getValidationErrors?.() || error?.response?.getValidationErrors?.()
+    if (validationErrors) {
+      this.setErrors(validationErrors)
+    }
+  }
+
+  onFatalSaveFailure(_error: any, _response?: any): void {
+    this.fatal = true
   }
 
   onDelete(): Promise<number> {
@@ -830,8 +858,21 @@ export class Model {
   // --- HTTP: response update ---
 
   update(data: any): void {
+    if (isEmpty(data)) {
+      // Empty response — just sync
+      return
+    }
+
     if (isPlainObject(data)) {
       this.assign(data)
+      return
+    }
+
+    // If data is a scalar, treat as identifier
+    if (this.isValidIdentifier(data)) {
+      const idKey = this.getOption('identifier')
+      this._attributes[idKey] = data
+      this._reference[idKey] = data
     }
   }
 
@@ -938,6 +979,10 @@ export class Model {
     const rules = this._cache.validation || this.validation()
     const rule = rules[attribute]
     return rule ? [rule] : []
+  }
+
+  async validateAttribute(attribute: string): Promise<Record<string, any>> {
+    return this.validate(attribute)
   }
 
   // --- Deep serialization ---
