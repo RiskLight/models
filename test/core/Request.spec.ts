@@ -78,7 +78,7 @@ describe('ResponseError', () => {
 describe('ValidationError', () => {
   it('wraps validation errors', () => {
     const errors = { name: 'Required', email: 'Invalid' }
-    const err = new ValidationError('Validation failed', errors)
+    const err = new ValidationError(errors, 'Validation failed')
     expect(err.message).toBe('Validation failed')
     expect(err.getValidationErrors()).toEqual(errors)
   })

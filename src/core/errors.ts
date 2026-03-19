@@ -38,7 +38,7 @@ export class ResponseError extends Error {
 export class ValidationError extends Error {
   private errors: any
 
-  constructor(message: string, errors: any) {
+  constructor(errors: any, message: string = 'Validation failed') {
     super(message)
     this.errors = errors
   }

@@ -207,15 +207,13 @@ describe('Validation: model integration', () => {
     }
 
     const user = new User()
-    const result = await user.validate()
-    expect(result).toBe(false) // has errors
-
-    expect(user.errors).toHaveProperty('name')
-    expect(user.errors).toHaveProperty('email')
+    const errors = await user.validate()
+    expect(errors).toHaveProperty('name')
+    expect(errors).toHaveProperty('email')
 
     user.name = 'John'
     user.email = 'john@test.com'
-    const result2 = await user.validate()
-    expect(result2).toBe(true) // valid
+    const errors2 = await user.validate()
+    expect(errors2).toEqual({}) // valid
   })
 })

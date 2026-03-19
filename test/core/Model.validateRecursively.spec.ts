@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { isEmpty } from 'lodash-es'
 import { Model, Collection, required, email } from '../../src'
 
 class Address extends Model {
@@ -30,10 +31,10 @@ describe('Model: validateRecursively', () => {
     const address = new Address()
     const user = new User({ name: 'John', email: 'j@t.com', address })
 
-    const valid = await user.validate()
+    const errors = await user.validate()
 
     // User itself is valid, but nested address is not
-    expect(valid).toBe(false)
+    expect(isEmpty(errors)).toBe(true) // user's own errors empty
     expect(address.errors).toHaveProperty('street')
     expect(address.errors).toHaveProperty('city')
   })
@@ -42,8 +43,9 @@ describe('Model: validateRecursively', () => {
     const address = new Address({ street: '123 Main St', city: 'NYC' })
     const user = new User({ name: 'John', email: 'j@t.com', address })
 
-    const valid = await user.validate()
-    expect(valid).toBe(true)
+    const errors = await user.validate()
+    expect(isEmpty(errors)).toBe(true)
+    expect(isEmpty(address.errors)).toBe(true)
   })
 
   it('skips nested validation when validateRecursively=false', async () => {
@@ -56,8 +58,8 @@ describe('Model: validateRecursively', () => {
     const address = new Address() // invalid
     const user = new NoRecurseUser({ name: 'John', address })
 
-    const valid = await user.validate()
-    expect(valid).toBe(true) // doesn't check address
+    const errors = await user.validate()
+    expect(isEmpty(errors)).toBe(true)
     expect(address.errors).toEqual({}) // untouched
   })
 
@@ -73,16 +75,15 @@ describe('Model: validateRecursively', () => {
     ])
 
     const team = new Team({ name: 'Dev', members })
-    const valid = await team.validate()
+    await team.validate()
 
-    expect(valid).toBe(false)
     expect(members.models[1].errors).toHaveProperty('name')
     expect(members.models[1].errors).toHaveProperty('email')
   })
 
   it('null nested values are skipped', async () => {
     const user = new User({ name: 'John', email: 'j@t.com', address: null })
-    const valid = await user.validate()
-    expect(valid).toBe(true)
+    const errors = await user.validate()
+    expect(isEmpty(errors)).toBe(true)
   })
 })

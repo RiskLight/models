@@ -292,8 +292,8 @@ export class Collection<M extends Model = Model> {
     this._models.forEach(m => m.sync())
   }
 
-  reset(...attributes: string[]): void {
-    this._models.forEach(m => m.reset(attributes.length ? attributes : undefined))
+  reset(attribute?: string | string[]): void {
+    this._models.forEach(m => m.reset(attribute))
   }
 
   // --- Attributes ---

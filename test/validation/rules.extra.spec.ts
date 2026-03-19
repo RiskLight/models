@@ -109,10 +109,10 @@ describe('Validation: same(attribute)', () => {
     }
 
     const form = new Form({ password: 'secret', password_confirmation: 'secret' })
-    expect(await form.validate()).toBe(true)
+    expect(await form.validate()).toEqual({})
 
     form.password_confirmation = 'different'
-    expect(await form.validate()).toBe(false)
-    expect(form.errors).toHaveProperty('password_confirmation')
+    const errors = await form.validate()
+    expect(errors).toHaveProperty('password_confirmation')
   })
 })

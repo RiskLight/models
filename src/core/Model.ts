@@ -364,48 +364,38 @@ export class Model {
 
   // --- Validation ---
 
-  async validate(attributes?: string | string[]): Promise<boolean> {
+  async validate(attributes?: string | string[]): Promise<Record<string, any>> {
     const schema = this.schema()
     const rules = this._cache.validation || this.validation()
 
-    let selfValid = true
-
     // schema() takes priority over validation()
     if (schema) {
-      selfValid = await this._validateWithZod(schema, attributes)
+      await this._validateWithZod(schema, attributes)
     } else if (!isEmpty(rules)) {
-      selfValid = await this._validateWithRules(rules, attributes)
+      await this._validateWithRules(rules, attributes)
+    } else {
+      this._errors = {}
     }
 
     // Recursively validate nested models/collections
     if (this.getOption('validateRecursively') && !attributes) {
-      const nestedValid = await this._validateNested()
-      return selfValid && nestedValid
+      await this._validateNested()
     }
 
-    return selfValid
+    return this._errors
   }
 
-  private async _validateNested(): Promise<boolean> {
-    let allValid = true
-
+  private async _validateNested(): Promise<void> {
     for (const value of Object.values(this._attributes)) {
       if (value instanceof Model) {
-        const valid = await value.validate()
-        if (!valid) allValid = false
+        await value.validate()
       } else if (value && typeof value === 'object' && '_models' in value && Array.isArray(value._models)) {
-        // Collection
-        const results = await value.validate()
-        if (Array.isArray(results) && results.some((r: boolean) => !r)) {
-          allValid = false
-        }
+        await value.validate()
       }
     }
-
-    return allValid
   }
 
-  private async _validateWithZod(schema: any, attributes?: string | string[]): Promise<boolean> {
+  private async _validateWithZod(schema: any, attributes?: string | string[]): Promise<void> {
     const data = attributes
       ? pick(this._attributes, castArray(attributes))
       : this._attributes
@@ -414,7 +404,7 @@ export class Model {
 
     if (result.success) {
       this._errors = {}
-      return true
+      return
     }
 
     // Convert Zod errors to vue-mc format
@@ -432,10 +422,9 @@ export class Model {
     }
 
     this._errors = errors
-    return false
   }
 
-  private async _validateWithRules(rules: Record<string, any>, attributes?: string | string[]): Promise<boolean> {
+  private async _validateWithRules(rules: Record<string, any>, attributes?: string | string[]): Promise<void> {
     const keys = attributes ? castArray(attributes) : Object.keys(rules)
     const errors: Record<string, string | string[]> = {}
 
@@ -456,7 +445,6 @@ export class Model {
     }
 
     this._errors = errors
-    return isEmpty(errors)
   }
 
   get errors(): Record<string, any> {
@@ -625,8 +613,8 @@ export class Model {
         this.mutate()
       }
 
-      this.validate().then((valid) => {
-        if (valid) return resolve(Model.REQUEST_CONTINUE)
+      this.validate().then(() => {
+        if (isEmpty(this._errors)) return resolve(Model.REQUEST_CONTINUE)
         this.saving = false
         reject(this._errors)
       })
