@@ -1,7 +1,9 @@
 // @risklight/models — Request
-// TDD: implement to pass test/core/Request.spec.ts
 
-import type { AxiosRequestConfig } from 'axios'
+import axios from 'axios'
+import type { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
+import { Response } from './Response'
+import { RequestError } from './errors'
 
 export class Request {
   config: AxiosRequestConfig
@@ -10,15 +12,25 @@ export class Request {
     this.config = config
   }
 
-  send(): Promise<any> {
-    throw new Error('Not implemented')
+  createResponse(axiosResponse?: AxiosResponse): Response {
+    return new Response(
+      axiosResponse
+        ? { data: axiosResponse.data, status: axiosResponse.status, headers: axiosResponse.headers as Record<string, any> }
+        : undefined,
+    )
   }
 
-  createResponse(_axiosResponse?: any): any {
-    throw new Error('Not implemented')
+  createError(axiosError: AxiosError): RequestError {
+    const response = this.createResponse(axiosError.response)
+    return new RequestError(axiosError.message || 'Request failed', axiosError, response)
   }
 
-  createError(_axiosError: any): any {
-    throw new Error('Not implemented')
+  send(): Promise<Response> {
+    return axios
+      .request(this.config)
+      .then((response) => this.createResponse(response))
+      .catch((error: AxiosError) => {
+        throw this.createError(error)
+      })
   }
 }

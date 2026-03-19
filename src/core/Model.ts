@@ -640,6 +640,7 @@ export class Model {
       onRequest.call(this).then((status: number) => {
         switch (status) {
           case Model.REQUEST_SKIP:
+            resolve(null)
             return
           case Model.REQUEST_REDUNDANT:
             onSuccess.call(this, null)
