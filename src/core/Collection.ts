@@ -1,6 +1,6 @@
 // @risklight/models — Collection
 
-import { defaults as _defaults, isEmpty, isFunction, castArray } from 'lodash-es'
+import { defaults as _defaults, isEmpty, isFunction } from 'lodash-es'
 import { Model } from './Model'
 import { Request } from './Request'
 import { ProxyResponse } from './ProxyResponse'

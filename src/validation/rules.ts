@@ -23,17 +23,17 @@ export class Rule {
   }
 
   and(other: Rule): Rule {
-    const self = this
+    const test = this._test
     return new Rule(
-      (v) => self.test(v) && other.test(v),
+      (v) => test(v) && other.test(v),
       this._message,
     )
   }
 
   or(other: Rule): Rule {
-    const self = this
+    const test = this._test
     return new Rule(
-      (v) => self.test(v) || other.test(v),
+      (v) => test(v) || other.test(v),
       this._message,
     )
   }
