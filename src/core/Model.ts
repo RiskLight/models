@@ -709,13 +709,23 @@ export class Model {
 
         const cfg = isFunction(config) ? config() : config
 
+        if (this.getOption('debug') === 'verbose') {
+          console.log(`[models] ${cfg.method} ${cfg.url}`, cfg.data || '')
+        }
+
         this.createRequest(cfg)
           .send()
           .then((response: any) => {
+            if (this.getOption('debug') === 'verbose') {
+              console.log(`[models] ${cfg.method} ${cfg.url} →`, response?.getStatus?.(), response?.getData?.())
+            }
             onSuccess.call(this, response)
             resolve(response)
           })
           .catch((error: any) => {
+            if (this.getOption('debug') === 'verbose') {
+              console.log(`[models] ${cfg.method} ${cfg.url} FAILED`, error?.message)
+            }
             onFailure.call(this, error, error.response)
             reject(error)
           })
@@ -895,6 +905,22 @@ export class Model {
     const rules = this._cache.validation || this.validation()
     const rule = rules[attribute]
     return rule ? [rule] : []
+  }
+
+  // --- Deep serialization ---
+
+  toPlainObject(): Record<string, any> {
+    const result: Record<string, any> = {}
+    for (const [key, value] of Object.entries(this._attributes)) {
+      if (value instanceof Model) {
+        result[key] = value.toPlainObject()
+      } else if (value && typeof value === 'object' && '_models' in value && Array.isArray(value._models)) {
+        result[key] = value._models.map((m: Model) => m.toPlainObject())
+      } else {
+        result[key] = value
+      }
+    }
+    return result
   }
 
   // --- Error factories (overridable) ---

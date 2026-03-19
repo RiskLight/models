@@ -67,6 +67,10 @@ export class Collection<M extends Model = Model> {
   get models(): M[] { return this._models }
   get length(): number { return this._models.length }
 
+  [Symbol.iterator](): Iterator<M> {
+    return this._models[Symbol.iterator]()
+  }
+
   // --- Internal ---
 
   private _addModel(modelOrAttrs: M | Record<string, any>, emitEvent: boolean = true): M {
