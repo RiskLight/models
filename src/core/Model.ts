@@ -26,6 +26,7 @@ export class Model {
   _cache: Record<string, any> = {}
   _uid: string
   _wasNew: boolean = false
+  _booted: boolean = false
 
   // --- HTTP: state flags ---
   loading: boolean = false
@@ -73,6 +74,7 @@ export class Model {
 
     // Boot hook
     this.boot()
+    this._booted = true
 
     // Return Proxy that intercepts ALL property access
     const STATE_PROPS = ['loading', 'saving', 'deleting', 'fatal']
@@ -84,14 +86,22 @@ export class Model {
           return true
         }
 
-        // Internal/private properties go directly on target
+        // Internal/private properties, prototype methods, state flags
         if (key.startsWith('_') || key in target.constructor.prototype || STATE_PROPS.includes(key)) {
           (target as any)[key] = value
           return true
         }
 
-        // Everything else goes through setAttribute
-        target._setAttribute(key, value)
+        // If key is a known attribute (from defaults), go through setAttribute
+        if (key in target._attributes) {
+          target._setAttribute(key, value)
+          return true
+        }
+
+        // Everything else goes directly on target (class fields, custom properties).
+        // Undeclared attribute detection works via set() method, not dot notation.
+        // This allows: protected backendBaseURL = '...' without polluting _attributes.
+        (target as any)[key] = value
         return true
       },
 
@@ -109,6 +119,11 @@ export class Model {
         if (key in target._attributes) {
           target._trackSignal(key)
           return target._attributes[key]
+        }
+
+        // Own instance property (class fields like backendBaseURL)
+        if (Object.prototype.hasOwnProperty.call(target, key)) {
+          return (target as any)[key]
         }
 
         // Debug: warn on access to undeclared attribute

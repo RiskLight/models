@@ -74,7 +74,7 @@ describe('Model: proxy attribute access', () => {
   })
 })
 
-// --- Proxy: undeclared attributes (the key feature) ---
+// --- Undeclared attributes via set() ---
 
 describe('Model: undeclared attributes', () => {
   class User extends Model {
@@ -83,24 +83,24 @@ describe('Model: undeclared attributes', () => {
     }
   }
 
-  it('catches writes to undeclared attributes', () => {
+  it('set() catches undeclared attributes with warning', () => {
     const user = new User()
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    ;(user as any).discount = 5
+    user.set('discount', 5)
 
-    expect((user as any).discount).toBe(5)
+    expect(user.get('discount')).toBe(5)
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining('Undeclared')
     )
     warn.mockRestore()
   })
 
-  it('stores undeclared attributes in _attributes', () => {
+  it('set() stores undeclared attributes in _attributes', () => {
     const user = new User()
     vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    ;(user as any).discount = 5
+    user.set('discount', 5)
     expect(user.get('discount')).toBe(5)
 
     vi.restoreAllMocks()
@@ -110,7 +110,7 @@ describe('Model: undeclared attributes', () => {
     const user = new User()
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    ;(user as any).discount = 5
+    user.set('discount', 5)
 
     expect(warn).toHaveBeenCalledWith(
       expect.stringMatching(/Undeclared.*"discount".*User/)
@@ -118,19 +118,7 @@ describe('Model: undeclared attributes', () => {
     warn.mockRestore()
   })
 
-  it('warns on set() with undeclared attribute', () => {
-    const user = new User()
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    user.set('discount', 5)
-
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('Undeclared')
-    )
-    warn.mockRestore()
-  })
-
-  it('warns on set() with object containing undeclared attributes', () => {
+  it('set() with object containing undeclared attributes warns for each', () => {
     const user = new User()
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -138,6 +126,14 @@ describe('Model: undeclared attributes', () => {
 
     expect(warn).toHaveBeenCalledTimes(2)
     warn.mockRestore()
+  })
+
+  it('dot notation puts unknown keys on target (class field compat)', () => {
+    const user = new User()
+    ;(user as any).backendBaseURL = 'http://localhost'
+    expect((user as any).backendBaseURL).toBe('http://localhost')
+    // Should NOT be in _attributes
+    expect(user.has('backendBaseURL')).toBe(false)
   })
 })
 
@@ -150,21 +146,21 @@ describe('Model: debug option', () => {
     }
   }
 
-  it('debug=true shows warnings for undeclared attributes (default)', () => {
+  it('debug=true shows warnings via set()', () => {
     const user = new User(undefined, undefined, { debug: true })
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    ;(user as any).discount = 5
+    user.set('discount', 5)
     expect(warn).toHaveBeenCalled()
 
     warn.mockRestore()
   })
 
-  it('debug=false suppresses undeclared attribute warnings', () => {
+  it('debug=false suppresses warnings via set()', () => {
     const user = new User(undefined, undefined, { debug: false })
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    ;(user as any).discount = 5
+    user.set('discount', 5)
     expect(warn).not.toHaveBeenCalled()
 
     warn.mockRestore()
@@ -204,30 +200,29 @@ describe('Model: debug option', () => {
 
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    ;(new DebugUser() as any).x = 1
+    new DebugUser().set('x', 1)
     expect(warn).toHaveBeenCalled()
 
     warn.mockClear()
 
-    ;(new SilentUser() as any).x = 1
+    new SilentUser().set('x', 1)
     expect(warn).not.toHaveBeenCalled()
 
     warn.mockRestore()
   })
 
-  it('debug: "strict" throws error instead of warning', () => {
+  it('debug: "strict" throws error on set() with undeclared', () => {
     const user = new User(undefined, undefined, { debug: 'strict' })
 
     expect(() => {
-      ;(user as any).discount = 5
+      user.set('discount', 5)
     }).toThrow(/Undeclared.*"discount".*User/)
   })
 
-  it('undeclared attributes still work functionally regardless of debug mode', () => {
+  it('undeclared attributes via set() work functionally regardless of debug mode', () => {
     const user = new User(undefined, undefined, { debug: false })
 
-    ;(user as any).discount = 5
-    expect((user as any).discount).toBe(5)
+    user.set('discount', 5)
     expect(user.get('discount')).toBe(5)
   })
 })
