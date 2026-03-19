@@ -1,6 +1,6 @@
 // @risklight/models — Collection
 
-import { defaults as _defaults, isEmpty, isFunction } from 'lodash-es'
+import { get, set as _set, defaults as _defaults, isEmpty, isFunction } from 'lodash-es'
 import { Model } from './Model.js'
 import { Request } from './Request.js'
 import { ProxyResponse } from './ProxyResponse.js'
@@ -54,13 +54,77 @@ export class Collection<M extends Model = Model> {
   getDefaultOptions(): Record<string, any> {
     return {
       useDeleteBody: true,
-      routeParameterPattern: /\{([^}]+)}/,
-      methods: {
-        fetch: 'GET',
-        save: 'POST',
-        delete: 'DELETE',
-      },
+      routeParameterPattern: this.getDefaultRouteParameterPattern(),
+      validationErrorStatus: 422,
+      methods: this.getDefaultMethods(),
     }
+  }
+
+  getDefaultMethods(): Record<string, string> {
+    return {
+      fetch: 'GET',
+      save: 'POST',
+      update: 'PUT',
+      create: 'POST',
+      patch: 'PATCH',
+      delete: 'DELETE',
+    }
+  }
+
+  getDefaultRouteParameterPattern(): RegExp {
+    return /\{([^}]+)}/
+  }
+
+  // --- Options ---
+
+  getOption(path: string, fallback?: any): any {
+    return get(this._options, path, fallback)
+  }
+
+  setOption(path: string, value: any): void {
+    _set(this._options, path, value)
+  }
+
+  setOptions(...options: Record<string, any>[]): void {
+    this._options = _defaults(this._options, ...options)
+  }
+
+  getOptions(): Record<string, any> {
+    return this._options
+  }
+
+  // --- HTTP: methods ---
+
+  getFetchMethod(): string { return this.getOption('methods.fetch') }
+  getSaveMethod(): string { return this.getOption('methods.save') }
+  getDeleteMethod(): string { return this.getOption('methods.delete') }
+
+  // --- HTTP: headers ---
+
+  getDefaultHeaders(): Record<string, any> { return {} }
+  getFetchHeaders(): Record<string, any> { return this.getDefaultHeaders() }
+  getSaveHeaders(): Record<string, any> { return this.getDefaultHeaders() }
+  getDeleteHeaders(): Record<string, any> { return this.getDefaultHeaders() }
+
+  // --- HTTP: query ---
+
+  getFetchQuery(): Record<string, any> { return {} }
+  getSaveQuery(): Record<string, any> { return {} }
+  getDeleteBody(): any {
+    if (this._options.useDeleteBody) {
+      return this.getIdentifiers(this.getDeletingModels())
+    }
+    return {}
+  }
+
+  // --- HTTP: validation ---
+
+  isBackendValidationError(error: any): boolean {
+    return error?.response?.getStatus?.() === this.getOption('validationErrorStatus')
+  }
+
+  getValidationErrorStatus(): number {
+    return this.getOption('validationErrorStatus')
   }
 
   // --- Models array ---
@@ -565,16 +629,9 @@ export class Collection<M extends Model = Model> {
     return this._models.filter(m => m.deleting)
   }
 
-  getDeleteBody(): any {
-    if (this._options.useDeleteBody) {
-      return this.getIdentifiers(this.getDeletingModels())
-    }
-    return {}
-  }
-
   getDeleteQuery(): Record<string, any> {
     if (!this._options.useDeleteBody) {
-      const ids = this.getDeletingModels().map(m => m.identifier())
+      const ids = this.getIdentifiers(this.getDeletingModels())
       return { [this.getDeleteQueryIdentifierKey()]: ids.join(',') }
     }
     return {}
