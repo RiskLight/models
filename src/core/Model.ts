@@ -1,6 +1,6 @@
 // @risklight/models — Model
 
-import { get, set as _set, defaults as _defaults, pick, flow, castArray, mapValues, isFunction, isPlainObject, isEmpty, isUndefined, isEqual } from 'lodash-es'
+import { get, set as _set, defaults as _defaults, pick, flow, castArray, isFunction, isPlainObject, isEmpty, isUndefined, isEqual } from 'lodash-es'
 import { Request } from './Request'
 
 type Listener = (context: Record<string, any>) => void
@@ -67,15 +67,17 @@ export class Model {
     this.boot()
 
     // Return Proxy that intercepts ALL property access
+    const STATE_PROPS = ['loading', 'saving', 'deleting', 'fatal']
+
     return new Proxy(this, {
-      set(target, key, value) {
-        if (typeof key === 'symbol') {
+      set(target, key: string | symbol, value) {
+        if (typeof key !== 'string') {
           (target as any)[key] = value
           return true
         }
 
         // Internal/private properties go directly on target
-        if (key.startsWith('_') || key in target.constructor.prototype || ['loading', 'saving', 'deleting', 'fatal'].includes(key)) {
+        if (key.startsWith('_') || key in target.constructor.prototype || STATE_PROPS.includes(key)) {
           (target as any)[key] = value
           return true
         }
@@ -85,13 +87,13 @@ export class Model {
         return true
       },
 
-      get(target, key) {
-        if (typeof key === 'symbol') {
+      get(target, key: string | symbol) {
+        if (typeof key !== 'string') {
           return (target as any)[key]
         }
 
         // Internal/private, methods, known non-attribute properties
-        if (key.startsWith('_') || key in target.constructor.prototype || ['loading', 'saving', 'deleting', 'fatal'].includes(key)) {
+        if (key.startsWith('_') || key in target.constructor.prototype || STATE_PROPS.includes(key)) {
           return (target as any)[key]
         }
 
@@ -103,7 +105,7 @@ export class Model {
 
         // Debug: warn on access to undeclared attribute
         const debug = target.getOption('debug')
-        if (debug && !(key in target._attributes)) {
+        if (debug) {
           const msg = `[models] Access of undeclared "${key}" on ${target.constructor.name}`
           if (debug === 'strict') {
             throw new Error(msg)
@@ -139,7 +141,7 @@ export class Model {
       mutateBeforeSync: true,
       mutateBeforeSave: true,
       debug: true,
-      routeParameterPattern: /\{([^}]+)\}/,
+      routeParameterPattern: /\{([^}]+)}/,
       validationErrorStatus: 422,
       methods: {
         fetch: 'GET',
@@ -448,8 +450,7 @@ export class Model {
 
   clone(): this {
     const Constructor = this.constructor as any
-    const clone = new Constructor({ ...this._attributes }, undefined, { ...this._options })
-    return clone
+    return new Constructor({ ...this._attributes }, undefined, { ...this._options })
   }
 
   toJSON(): Record<string, any> {
