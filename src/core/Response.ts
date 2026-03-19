@@ -8,7 +8,7 @@ export interface ResponseData {
 }
 
 export class Response {
-  private response?: ResponseData
+  response?: ResponseData
 
   constructor(response?: ResponseData) {
     this.response = response

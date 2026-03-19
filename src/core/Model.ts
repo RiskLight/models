@@ -154,17 +154,25 @@ export class Model {
       mutateBeforeSync: true,
       mutateBeforeSave: true,
       debug: true,
-      routeParameterPattern: /\{([^}]+)}/,
+      routeParameterPattern: this.getDefaultRouteParameterPattern(),
       validationErrorStatus: 422,
-      methods: {
-        fetch: 'GET',
-        save: 'POST',
-        update: 'PUT',
-        create: 'POST',
-        patch: 'PATCH',
-        delete: 'DELETE',
-      },
+      methods: this.getDefaultMethods(),
     }
+  }
+
+  getDefaultMethods(): Record<string, string> {
+    return {
+      fetch: 'GET',
+      save: 'POST',
+      update: 'PUT',
+      create: 'POST',
+      patch: 'PATCH',
+      delete: 'DELETE',
+    }
+  }
+
+  getDefaultRouteParameterPattern(): RegExp {
+    return /\{([^}]+)}/
   }
 
   // --- Internal: attribute management ---
