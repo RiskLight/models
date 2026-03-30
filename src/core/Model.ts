@@ -11,6 +11,15 @@ type Mutation = (value: any) => any
 
 let _uidCounter = 0
 
+// Keys that JS/Vue/lodash check automatically on objects — not real attributes
+const INTROSPECTION_KEYS = new Set([
+  'length', 'then', 'toJSON', 'constructor', 'prototype',
+  'hasOwnProperty', 'isPrototypeOf', 'valueOf', 'toString',
+  'toLocaleString', 'propertyIsEnumerable',
+  '__proto__', '__ob__', '__v_isRef', '__v_isShallow', '__v_raw',
+  '__v_isReadonly', '__v_isReactive', '__v_skip',
+])
+
 export class Model {
   [key: string]: any
 
@@ -127,6 +136,9 @@ export class Model {
         }
 
         // Debug: warn on access to undeclared attribute
+        // Skip common JS/Vue/lodash introspection properties
+        if (INTROSPECTION_KEYS.has(key)) return undefined
+
         const debug = target.getOption('debug')
         if (debug) {
           const msg = `[models] Access of undeclared "${key}" on ${target.constructor.name}`
