@@ -166,24 +166,13 @@ describe('Model: debug option', () => {
     warn.mockRestore()
   })
 
-  it('debug=true warns on read of undeclared attribute', () => {
+  it('reading undeclared attribute returns undefined without warning', () => {
     const user = new User(undefined, undefined, { debug: true })
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    const _value = (user as any).discount
+    const value = (user as any).discount
 
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringMatching(/Access.*undeclared.*"discount".*User/)
-    )
-    warn.mockRestore()
-  })
-
-  it('debug=false does not warn on read of undeclared attribute', () => {
-    const user = new User(undefined, undefined, { debug: false })
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    const _value = (user as any).discount
-
+    expect(value).toBeUndefined()
     expect(warn).not.toHaveBeenCalled()
     warn.mockRestore()
   })

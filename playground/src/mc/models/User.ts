@@ -1,5 +1,6 @@
 import { Model } from '@risklight/models'
 import { required, string, email as emailRule, integer, between, array } from '@risklight/models/validation'
+import { Position } from './Position'
 
 const API = 'http://localhost:3001'
 
@@ -11,7 +12,7 @@ export class User extends Model {
       email: '',
       age: 0,
       active: true,
-      positionId: null,
+      position: null as Position | null,
       address: {
         street: '',
         city: '',
@@ -41,7 +42,7 @@ export class User extends Model {
       name: required.and(string),
       email: required.and(emailRule),
       age: required.and(integer).and(between(0, 120)),
-      positionId: required,
+      position: required,
       tags: required.and(array),
     }
   }
@@ -51,6 +52,18 @@ export class User extends Model {
       identifier: 'id',
       saveUnchanged: false,
       patch: true,
+      mutateBeforeSync: true,
+    }
+  }
+
+  // Cast position from plain object to Position model on fetch
+  mutations() {
+    return {
+      position: (value: any) => {
+        if (value instanceof Position) return value
+        if (value && typeof value === 'object') return new Position(value)
+        return null
+      },
     }
   }
 
@@ -63,5 +76,14 @@ export class User extends Model {
     return this.isNew()
       ? `${API}/users`
       : `${API}/users/${this.get('id')}`
+  }
+
+  // Serialize position back to plain object for save
+  getSaveData(): Record<string, any> {
+    const data = super.getSaveData()
+    if (data.position instanceof Position) {
+      data.position = data.position.toJSON()
+    }
+    return data
   }
 }

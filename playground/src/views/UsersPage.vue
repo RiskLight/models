@@ -23,6 +23,7 @@ const fetchAll = async () => {
   try {
     await Promise.all([users.fetch(), positions.fetch()])
     addLog(`Fetched ${users.size()} users, ${positions.size()} positions`)
+    console.log(users)
   } catch (e: any) {
     addLog(`Fetch error: ${e.message}`)
   }
@@ -31,12 +32,24 @@ const fetchAll = async () => {
 
 onMounted(fetchAll)
 
-// ============ POSITION LOOKUP ============
+// ============ POSITION HELPERS ============
 
-const getPositionTitle = (posId: number | null) => {
-  if (!posId) return '—'
+const getPositionLabel = (pos: any) => {
+  if (!pos) return '—'
+  if (pos.title) return `${pos.title} (${pos.level})`
+  return '—'
+}
+
+const setPosition = (posId: number | null) => {
+  if (!editModel.value) return
+  if (!posId) {
+    editModel.value.set('position', null)
+    return
+  }
   const pos = positions.find((p: Position) => p.id === posId)
-  return pos ? `${pos.title} (${pos.level})` : `ID: ${posId}`
+  if (pos) {
+    editModel.value.set('position', pos.clone())
+  }
 }
 
 // ============ FORM STATE ============
@@ -141,6 +154,20 @@ const removeTag = (idx: number) => {
   editModel.value.set('tags', tags)
 }
 
+// ============ UNDECLARED ATTR TEST ============
+
+const testUndeclaredSet = () => {
+  if (!editModel.value) return
+  editModel.value.set('discount', 99.9)
+  addLog(`set('discount', 99.9) — check console for warning`)
+}
+
+const testUndeclaredDot = () => {
+  if (!editModel.value) return
+  ;(editModel.value as any).bonus = 50
+  addLog(`model.bonus = 50 (dot notation) — check console for warning`)
+}
+
 // ============ DEBUG INFO ============
 
 const debugInfo = computed(() => {
@@ -194,7 +221,7 @@ const debugInfo = computed(() => {
           <td style="padding: 8px; font-weight: 500;">{{ user.name }}</td>
           <td style="padding: 8px;">{{ user.email }}</td>
           <td style="padding: 8px;">{{ user.age }}</td>
-          <td style="padding: 8px;">{{ getPositionTitle(user.positionId) }}</td>
+          <td style="padding: 8px;">{{ getPositionLabel(user.position) }}</td>
           <td style="padding: 8px;">{{ user.address?.city }}</td>
           <td style="padding: 8px;">
             <span v-for="tag in user.tags" :key="tag"
@@ -250,16 +277,19 @@ const debugInfo = computed(() => {
           </label>
         </div>
 
-        <!-- Position (nested model reference) -->
+        <!-- Position (nested model) -->
         <div style="margin-bottom: 12px;">
-          <label style="display: block; margin-bottom: 4px; font-weight: 600;">Position *</label>
-          <select v-model="editModel.positionId" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          <label style="display: block; margin-bottom: 4px; font-weight: 600;">Position * (nested model)</label>
+          <select :value="editModel.position?.id" @change="setPosition(Number(($event.target as HTMLSelectElement).value) || null)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             <option :value="null">— Select —</option>
             <option v-for="pos in positions.models" :key="pos.id" :value="pos.id">
               {{ pos.title }} ({{ pos.level }}) — {{ pos.department }}
             </option>
           </select>
-          <span v-if="formErrors.positionId" style="color: red; font-size: 12px;">{{ formErrors.positionId }}</span>
+          <div v-if="editModel.position" style="margin-top: 4px; padding: 6px 10px; background: #f0f7ff; border-radius: 4px; font-size: 12px;">
+            Nested model: {{ editModel.position.title }} | level: {{ editModel.position.level }} | dept: {{ editModel.position.department }}
+          </div>
+          <span v-if="formErrors.position" style="color: red; font-size: 12px;">{{ formErrors.position }}</span>
         </div>
 
         <!-- Address (nested object) -->
@@ -330,6 +360,14 @@ const debugInfo = computed(() => {
         <!-- Debug panel -->
         <details style="margin-bottom: 12px;">
           <summary style="cursor: pointer; font-weight: 600; color: #666;">Debug Info</summary>
+          <div style="display: flex; gap: 8px; margin: 8px 0;">
+            <button @click="testUndeclaredSet" style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;">
+              Test: set('discount', 99.9)
+            </button>
+            <button @click="testUndeclaredDot" style="padding: 6px 12px; background: #e91e63; color: white; border: none; border-radius: 4px; cursor: pointer;">
+              Test: model.bonus = 50 (dot)
+            </button>
+          </div>
           <pre v-if="debugInfo" style="background: #f5f5f5; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; max-height: 300px;">{{ JSON.stringify(debugInfo, null, 2) }}</pre>
         </details>
 

@@ -32,7 +32,12 @@
       "email": "john@example.com",
       "age": 32,
       "active": true,
-      "positionId": 1,
+      "position": {
+        "id": 1,
+        "title": "Developer",
+        "level": "senior",
+        "department": "engineering"
+      },
       "address": {
         "street": "123 Main St",
         "city": "New York",
@@ -41,8 +46,7 @@
       },
       "tags": [
         "admin",
-        "dev",
-        "test"
+        "dev"
       ],
       "settings": {
         "theme": "dark",
@@ -57,7 +61,12 @@
       "email": "jane@example.com",
       "age": 28,
       "active": true,
-      "positionId": 2,
+      "position": {
+        "id": 2,
+        "title": "Designer",
+        "level": "middle",
+        "department": "design"
+      },
       "address": {
         "street": "456 Oak Ave",
         "city": "London",
@@ -80,7 +89,12 @@
       "email": "bob@example.com",
       "age": 45,
       "active": false,
-      "positionId": 3,
+      "position": {
+        "id": 3,
+        "title": "Manager",
+        "level": "lead",
+        "department": "management"
+      },
       "address": {
         "street": "789 Pine Rd",
         "city": "Berlin",
@@ -97,6 +111,35 @@
         "language": "de"
       },
       "createdAt": "2025-03-10T09:15:00Z"
+    },
+    {
+      "id": 4,
+      "name": "John Doe (clone)",
+      "email": "john@example.com",
+      "age": 32,
+      "active": true,
+      "position": {
+        "id": 1,
+        "title": "Developer",
+        "level": "senior",
+        "department": "engineering"
+      },
+      "address": {
+        "street": "123 Main St",
+        "city": "New York",
+        "zip": "10001",
+        "country": "US"
+      },
+      "tags": [
+        "admin",
+        "dev"
+      ],
+      "settings": {
+        "theme": "dark",
+        "notifications": true,
+        "language": "en"
+      },
+      "createdAt": "2025-01-15T10:00:00Z"
     }
   ]
 }

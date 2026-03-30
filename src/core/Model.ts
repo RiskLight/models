@@ -11,14 +11,6 @@ type Mutation = (value: any) => any
 
 let _uidCounter = 0
 
-// Keys that JS/Vue/lodash check automatically on objects — not real attributes
-const INTROSPECTION_KEYS = new Set([
-  'length', 'then', 'toJSON', 'constructor', 'prototype',
-  'hasOwnProperty', 'isPrototypeOf', 'valueOf', 'toString',
-  'toLocaleString', 'propertyIsEnumerable',
-  '__proto__', '__ob__', '__v_isRef', '__v_isShallow', '__v_raw',
-  '__v_isReadonly', '__v_isReactive', '__v_skip',
-])
 
 export class Model {
   [key: string]: any
@@ -83,7 +75,9 @@ export class Model {
 
     // Boot hook
     this.boot()
-    this._booted = true
+    // Delay _booted so subclass field initializers (protected backendBaseURL = ...)
+    // run before we start warning about undeclared attributes
+    queueMicrotask(() => { this._booted = true })
 
     // Return Proxy that intercepts ALL property access
     const STATE_PROPS = ['loading', 'saving', 'deleting', 'fatal']
@@ -107,10 +101,14 @@ export class Model {
           return true
         }
 
-        // Everything else goes directly on target (class fields, custom properties).
-        // Undeclared attribute detection works via set() method, not dot notation.
-        // This allows: protected backendBaseURL = '...' without polluting _attributes.
-        (target as any)[key] = value
+        // Before boot completes: class field initialization — put on target silently
+        if (!target._booted) {
+          (target as any)[key] = value
+          return true
+        }
+
+        // After boot: undeclared attribute via dot notation — warn and put in _attributes
+        target._setAttribute(key, value)
         return true
       },
 
@@ -135,19 +133,7 @@ export class Model {
           return (target as any)[key]
         }
 
-        // Debug: warn on access to undeclared attribute
-        // Skip common JS/Vue/lodash introspection properties
-        if (INTROSPECTION_KEYS.has(key)) return undefined
-
-        const debug = target.getOption('debug')
-        if (debug) {
-          const msg = `[models] Access of undeclared "${key}" on ${target.constructor.name}`
-          if (debug === 'strict') {
-            throw new Error(msg)
-          }
-          console.warn(msg)
-        }
-
+        // Undeclared attribute read — return undefined silently
         return undefined
       },
     })
