@@ -70,7 +70,7 @@ export class Model {
     }
 
     // Sync initial state
-    this._reference = { ...this._attributes }
+    this._reference = JSON.parse(JSON.stringify(this._attributes))
 
     // Boot hook
     this.boot()
@@ -275,7 +275,7 @@ export class Model {
     }
 
     if (isUndefined(attribute)) {
-      this._reference = { ...this._attributes }
+      this._reference = JSON.parse(JSON.stringify(this._attributes))
     } else {
       for (const key of castArray(attribute)) {
         this._reference[key] = this._attributes[key]
@@ -286,14 +286,15 @@ export class Model {
   }
 
   reset(attribute?: string | string[]): void {
+    const ref = JSON.parse(JSON.stringify(this._reference))
     if (isUndefined(attribute)) {
       // Mutate in place to preserve Vue reactivity
       for (const key of Object.keys(this._attributes)) {
-        this._attributes[key] = this._reference[key]
+        this._attributes[key] = ref[key]
       }
     } else {
       for (const key of castArray(attribute)) {
-        this._attributes[key] = this._reference[key]
+        this._attributes[key] = ref[key]
       }
     }
 
@@ -351,7 +352,7 @@ export class Model {
     }
 
     // Sync reference state
-    this._reference = { ...this._attributes }
+    this._reference = JSON.parse(JSON.stringify(this._attributes))
   }
 
   // --- Identity ---

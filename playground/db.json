@@ -1,0 +1,102 @@
+{
+  "positions": [
+    {
+      "id": 1,
+      "title": "Developer",
+      "level": "senior",
+      "department": "engineering"
+    },
+    {
+      "id": 2,
+      "title": "Designer",
+      "level": "middle",
+      "department": "design"
+    },
+    {
+      "id": 3,
+      "title": "Manager",
+      "level": "lead",
+      "department": "management"
+    },
+    {
+      "id": 4,
+      "title": "QA Engineer",
+      "level": "junior",
+      "department": "engineering"
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "age": 32,
+      "active": true,
+      "positionId": 1,
+      "address": {
+        "street": "123 Main St",
+        "city": "New York",
+        "zip": "10001",
+        "country": "US"
+      },
+      "tags": [
+        "admin",
+        "dev",
+        "test"
+      ],
+      "settings": {
+        "theme": "dark",
+        "notifications": true,
+        "language": "en"
+      },
+      "createdAt": "2025-01-15T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "age": 28,
+      "active": true,
+      "positionId": 2,
+      "address": {
+        "street": "456 Oak Ave",
+        "city": "London",
+        "zip": "SW1A 1AA",
+        "country": "UK"
+      },
+      "tags": [
+        "design"
+      ],
+      "settings": {
+        "theme": "light",
+        "notifications": false,
+        "language": "en"
+      },
+      "createdAt": "2025-02-20T14:30:00Z"
+    },
+    {
+      "id": 3,
+      "name": "Bob Wilson",
+      "email": "bob@example.com",
+      "age": 45,
+      "active": false,
+      "positionId": 3,
+      "address": {
+        "street": "789 Pine Rd",
+        "city": "Berlin",
+        "zip": "10115",
+        "country": "DE"
+      },
+      "tags": [
+        "management",
+        "admin"
+      ],
+      "settings": {
+        "theme": "dark",
+        "notifications": true,
+        "language": "de"
+      },
+      "createdAt": "2025-03-10T09:15:00Z"
+    }
+  ]
+}
