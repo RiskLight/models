@@ -142,19 +142,6 @@ export class Model {
           return (target as any)[key]
         }
 
-        // Skip framework introspection keys silently
-        if (INTROSPECTION_KEYS.has(key)) return undefined
-
-        // Debug: warn on access to undeclared attribute
-        const debug = target.getOption('debug')
-        if (debug) {
-          const msg = `[models] Access of undeclared "${key}" on ${target.constructor.name}`
-          if (debug === 'strict') {
-            throw new Error(msg)
-          }
-          console.warn(msg)
-        }
-
         return undefined
       },
     })
