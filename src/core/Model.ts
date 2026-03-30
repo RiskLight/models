@@ -11,14 +11,6 @@ type Mutation = (value: any) => any
 
 let _uidCounter = 0
 
-// Keys that JS/Vue/lodash probe automatically — not real attribute accesses
-const INTROSPECTION_KEYS = new Set([
-  'length', 'then', 'toJSON', 'constructor', 'prototype',
-  'hasOwnProperty', 'isPrototypeOf', 'valueOf', 'toString',
-  'toLocaleString', 'propertyIsEnumerable',
-  '__proto__', '__ob__', '__v_isRef', '__v_isShallow', '__v_raw',
-  '__v_isReadonly', '__v_isReactive', '__v_skip',
-])
 
 
 export class Model {
