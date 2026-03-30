@@ -359,7 +359,7 @@ export class Model {
 
   identifier(): any {
     const key = this.getOption('identifier')
-    return this._reference[key] ?? this._attributes[key]
+    return this._attributes[key] ?? this._reference[key]
   }
 
   isNew(): boolean {
