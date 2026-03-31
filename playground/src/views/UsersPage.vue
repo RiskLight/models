@@ -84,7 +84,12 @@ const formErrors = ref<Record<string, any>>({})
 const saving = ref(false)
 
 const openCreate = () => {
-  editModel.value = new User()
+  const model = new User()
+  console.log('New User model:', model)
+  console.log('address:', model.address)
+  console.log('address instanceof Address:', model.address instanceof Address)
+  console.log('position:', model.position)
+  editModel.value = model
   formErrors.value = {}
   addLog('Opened create form')
 }

@@ -140,6 +140,65 @@
         "language": "en"
       },
       "createdAt": "2025-01-15T10:00:00Z"
+    },
+    {
+      "id": 5,
+      "name": "dssdfds",
+      "email": "sdfsd@sdc.ds",
+      "age": 0,
+      "active": true,
+      "position": {
+        "id": 2,
+        "title": "Designer",
+        "level": "middle",
+        "department": "design"
+      },
+      "address": {
+        "street": "acdscs",
+        "city": "asdcsd",
+        "zip": "123",
+        "country": "US",
+        "building": "",
+        "apartment": ""
+      },
+      "tags": [],
+      "settings": {
+        "theme": "light",
+        "notifications": true,
+        "language": "en"
+      },
+      "createdAt": null
+    },
+    {
+      "id": 6,
+      "name": "Bob Wilson (clone)",
+      "email": "bob@example.com",
+      "age": 45,
+      "active": false,
+      "position": {
+        "id": 3,
+        "title": "Manager",
+        "level": "lead",
+        "department": "management"
+      },
+      "address": {
+        "street": "789 Pine Rd",
+        "city": "Berlin",
+        "zip": "10115",
+        "country": "DE",
+        "building": "",
+        "apartment": ""
+      },
+      "tags": [
+        "management",
+        "admin"
+      ],
+      "settings": {
+        "theme": "dark",
+        "notifications": true,
+        "language": "de"
+      },
+      "createdAt": "2025-03-10T09:15:00Z"
     }
   ]
 }
