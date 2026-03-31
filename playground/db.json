@@ -27,63 +27,6 @@
   ],
   "users": [
     {
-      "id": 1,
-      "name": "John Doeааааа",
-      "email": "john@example.com",
-      "age": 32,
-      "active": true,
-      "position": {
-        "id": 1,
-        "title": "Developer",
-        "level": "senior",
-        "department": "engineering"
-      },
-      "address": {
-        "street": "123 Main St",
-        "city": "New York",
-        "zip": "10001",
-        "country": "US"
-      },
-      "tags": [
-        "admin",
-        "dev"
-      ],
-      "settings": {
-        "theme": "dark",
-        "notifications": true,
-        "language": "en"
-      },
-      "createdAt": "2025-01-15T10:00:00Z"
-    },
-    {
-      "id": 2,
-      "name": "Jane Smithививи",
-      "email": "jane@example.com",
-      "age": 28,
-      "active": true,
-      "position": {
-        "id": 2,
-        "title": "Designer",
-        "level": "middle",
-        "department": "design"
-      },
-      "address": {
-        "street": "456 Oak Ave",
-        "city": "London",
-        "zip": "SW1A 1AA",
-        "country": "UK"
-      },
-      "tags": [
-        "design"
-      ],
-      "settings": {
-        "theme": "light",
-        "notifications": false,
-        "language": "en"
-      },
-      "createdAt": "2025-02-20T14:30:00Z"
-    },
-    {
       "id": 3,
       "name": "Bob Wilsonивив",
       "email": "bob@example.com",
@@ -99,7 +42,9 @@
         "street": "789 Pine Rd",
         "city": "Berlin",
         "zip": "10115",
-        "country": "DE"
+        "country": "DE",
+        "building": "",
+        "apartment": ""
       },
       "tags": [
         "management",
@@ -107,7 +52,7 @@
       ],
       "settings": {
         "theme": "dark",
-        "notifications": true,
+        "notifications": false,
         "language": "de"
       },
       "createdAt": "2025-03-10T09:15:00Z"
@@ -128,7 +73,9 @@
         "street": "123 Main St",
         "city": "New York",
         "zip": "10001",
-        "country": "US"
+        "country": "US",
+        "building": "",
+        "apartment": ""
       },
       "tags": [
         "admin",
@@ -161,7 +108,10 @@
         "building": "",
         "apartment": ""
       },
-      "tags": [],
+      "tags": [
+        "ваымаыв",
+        "вамва"
+      ],
       "settings": {
         "theme": "light",
         "notifications": true,

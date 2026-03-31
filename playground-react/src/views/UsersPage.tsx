@@ -162,6 +162,31 @@ function EditForm({ model, positions, onSave, onClose }: {
           ) : <p style={{ color: '#999' }}>No address</p>}
         </fieldset>
 
+        {/* Settings (nested object) */}
+        <fieldset style={{ marginBottom: 12, padding: 12, border: '1px solid #ddd', borderRadius: 4 }}>
+          <legend style={{ fontWeight: 600 }}>Settings (nested object)</legend>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <label>Theme:
+              <select value={state.settings?.theme || 'light'} onChange={e => { model.settings = { ...model.settings, theme: e.target.value } }} style={{ padding: 4, marginLeft: 4 }}>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </label>
+            <label>Lang:
+              <select value={state.settings?.language || 'en'} onChange={e => { model.settings = { ...model.settings, language: e.target.value } }} style={{ padding: 4, marginLeft: 4 }}>
+                <option value="en">EN</option>
+                <option value="de">DE</option>
+                <option value="uk">UK</option>
+              </select>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <input type="checkbox" checked={state.settings?.notifications ?? true}
+                onChange={e => { model.settings = { ...model.settings, notifications: e.target.checked } }} />
+              Notifications
+            </label>
+          </div>
+        </fieldset>
+
         {/* Tags */}
         <fieldset style={{ marginBottom: 12, padding: 12, border: '1px solid #ddd', borderRadius: 4 }}>
           <legend style={{ fontWeight: 600 }}>Tags (array)</legend>

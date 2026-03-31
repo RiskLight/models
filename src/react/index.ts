@@ -15,29 +15,42 @@ import { Model } from '../core/Model.js'
 export function useModelState(model: InstanceType<typeof Model>): Record<string, any> {
   const subscribe = (callback: () => void) => {
     const handler = () => callback()
-    model.on('change', handler)
-    model.on('sync', handler)
-    model.on('reset', handler)
-    model.on('fetch', handler)
-    model.on('save.success', handler)
-    model.on('delete', handler)
-    return () => {
-      model.off('change', handler)
-      model.off('sync', handler)
-      model.off('reset', handler)
-      model.off('fetch', handler)
-      model.off('save.success', handler)
-      model.off('delete', handler)
+    const events = ['change', 'sync', 'reset', 'fetch', 'save.success', 'delete']
+    const cleanups: (() => void)[] = []
+
+    // Subscribe to parent model events
+    for (const event of events) {
+      model.on(event, handler)
+      cleanups.push(() => model.off(event, handler))
     }
+
+    // Subscribe to nested model events (e.g. address.change triggers parent re-render)
+    for (const value of Object.values(model._attributes)) {
+      if (value && typeof value === 'object' && typeof value.on === 'function') {
+        value.on('change', handler)
+        cleanups.push(() => value.off('change', handler))
+      }
+    }
+
+    return () => cleanups.forEach(fn => fn())
   }
 
-  let snapshot: Record<string, any> = { ...model._attributes }
+  // Deep serialize for snapshot comparison — catches nested object mutations
+  let lastJson = ''
+  let snapshot: Record<string, any> = {}
 
   const getSnapshot = () => {
-    const current = { ...model._attributes }
-    // Return same reference if nothing changed (React optimization)
-    if (JSON.stringify(current) !== JSON.stringify(snapshot)) {
-      snapshot = current
+    const json = JSON.stringify(model._attributes, (_key, value) => {
+      // Serialize nested models via toJSON
+      if (value && typeof value === 'object' && typeof value.toJSON === 'function' && value !== model) {
+        return value.toJSON()
+      }
+      return value
+    })
+
+    if (json !== lastJson) {
+      lastJson = json
+      snapshot = JSON.parse(json)
     }
     return snapshot
   }
