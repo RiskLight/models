@@ -11,4 +11,12 @@ export class Users extends Collection<User> {
       fetch: `${API}/users`,
     }
   }
+
+  // json-server uses _page/_limit instead of page/limit
+  getPaginationQuery(): Record<string, any> {
+    if (this.isPaginated()) {
+      return { _page: this.getPage(), _limit: 2 }
+    }
+    return {}
+  }
 }

@@ -71,6 +71,9 @@ export class Model {
       }
     }
 
+    // Apply mutations to initial attributes
+    this.mutate()
+
     // Sync initial state
     this._reference = JSON.parse(JSON.stringify(this._attributes))
 

@@ -1,6 +1,7 @@
 import { Model } from '@risklight/models'
 import { required, string, email as emailRule, integer, between, array } from '@risklight/models/validation'
 import { Position } from './Position'
+import { Address } from './Address'
 
 const API = 'http://localhost:3001'
 
@@ -13,12 +14,7 @@ export class User extends Model {
       age: 0,
       active: true,
       position: null as Position | null,
-      address: {
-        street: '',
-        city: '',
-        zip: '',
-        country: '',
-      },
+      address: new Address(),
       tags: [] as string[],
       settings: {
         theme: 'light',
@@ -39,11 +35,12 @@ export class User extends Model {
 
   validation() {
     return {
-      name: required.and(string),
-      email: required.and(emailRule),
-      age: required.and(integer).and(between(0, 120)),
-      position: required,
-      tags: required.and(array),
+      name: required.and(string).format('Name is required'),
+      email: required.and(emailRule).format('Valid email is required'),
+      age: required.and(integer).and(between(0, 120)).format('Age must be 0-120'),
+      position: required.format('Position is required'),
+      address: required.format('Address is required'),
+      tags: required.and(array).format('At least one tag is required'),
     }
   }
 
@@ -53,10 +50,10 @@ export class User extends Model {
       saveUnchanged: false,
       patch: true,
       mutateBeforeSync: true,
+      validateRecursively: true,
     }
   }
 
-  // Cast position from plain object to Position model on fetch
   mutations() {
     return {
       position: (value: any) => {
@@ -64,10 +61,14 @@ export class User extends Model {
         if (value && typeof value === 'object') return new Position(value)
         return null
       },
+      address: (value: any) => {
+        if (value instanceof Address) return value
+        if (value && typeof value === 'object') return new Address(value)
+        return new Address()
+      },
     }
   }
 
-  // json-server: POST for create, PATCH for partial update
   getSaveMethod(): string {
     return this.isNew() ? 'POST' : 'PATCH'
   }
@@ -78,11 +79,13 @@ export class User extends Model {
       : `${API}/users/${this.get('id')}`
   }
 
-  // Serialize position back to plain object for save
   getSaveData(): Record<string, any> {
     const data = super.getSaveData()
     if (data.position instanceof Position) {
       data.position = data.position.toJSON()
+    }
+    if (data.address instanceof Address) {
+      data.address = data.address.toJSON()
     }
     return data
   }

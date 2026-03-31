@@ -5,6 +5,15 @@ import { Users } from '../mc/collections/Users'
 import { Positions } from '../mc/collections/Positions'
 import { User } from '../mc/models/User'
 import { Position } from '../mc/models/Position'
+import { Address } from '../mc/models/Address'
+
+// ============ HELPERS ============
+
+const formatError = (err: any): string => {
+  if (!err) return ''
+  if (Array.isArray(err)) return err.join(', ')
+  return String(err)
+}
 
 // ============ COLLECTIONS ============
 
@@ -22,12 +31,28 @@ const fetchAll = async () => {
   loading.value = true
   try {
     await Promise.all([users.fetch(), positions.fetch()])
-    addLog(`Fetched ${users.size()} users, ${positions.size()} positions`)
-    console.log(users)
+    addLog(`Fetched ${users.size()} users (page ${users.getPage() || 'all'}), ${positions.size()} positions`)
   } catch (e: any) {
     addLog(`Fetch error: ${e.message}`)
   }
   loading.value = false
+}
+
+// Pagination
+const enablePagination = () => {
+  users.page(1)
+  fetchAll()
+  addLog('Pagination enabled, page 1')
+}
+const disablePagination = () => {
+  users.page(false)
+  fetchAll()
+  addLog('Pagination disabled, showing all')
+}
+const goToPage = (p: number) => {
+  users.page(p)
+  fetchAll()
+  addLog(`Go to page ${p}`)
 }
 
 onMounted(fetchAll)
@@ -85,6 +110,15 @@ const openEdit = async (user: User) => {
 const closeForm = () => {
   editModel.value = null
   formErrors.value = {}
+}
+
+// ============ RESET ============
+
+const resetModel = () => {
+  if (!editModel.value) return
+  editModel.value.reset()
+  formErrors.value = {}
+  addLog(`Reset model to saved state`)
 }
 
 // ============ SAVE ============
@@ -246,7 +280,23 @@ const debugInfo = computed(() => {
       </tbody>
     </table>
 
-    <p style="color: #666;">Collection: {{ users.size() }} users | {{ positions.size() }} positions</p>
+    <div style="display: flex; align-items: center; gap: 10px; margin: 10px 0; color: #666;">
+      <span>{{ users.size() }} users | {{ positions.size() }} positions</span>
+      <span v-if="users.isPaginated()">| Page {{ users.getPage() }}</span>
+      <div style="margin-left: auto; display: flex; gap: 6px;">
+        <button v-if="!users.isPaginated()" @click="enablePagination" style="padding: 4px 10px; cursor: pointer; font-size: 12px;">
+          Enable Pagination (2 per page)
+        </button>
+        <template v-else>
+          <button @click="goToPage(users.getPage() - 1)" :disabled="users.getPage() <= 1" style="padding: 4px 10px; cursor: pointer;">←</button>
+          <button @click="goToPage(1)" style="padding: 4px 10px; cursor: pointer;">1</button>
+          <button @click="goToPage(2)" style="padding: 4px 10px; cursor: pointer;">2</button>
+          <button @click="goToPage(3)" style="padding: 4px 10px; cursor: pointer;">3</button>
+          <button @click="goToPage(users.getPage() + 1)" style="padding: 4px 10px; cursor: pointer;">→</button>
+          <button @click="disablePagination" style="padding: 4px 10px; cursor: pointer; color: red;">Show All</button>
+        </template>
+      </div>
+    </div>
 
     <!-- ============ FORM MODAL ============ -->
     <div v-if="editModel" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-start; justify-content: center; padding-top: 40px; overflow-y: auto;">
@@ -257,21 +307,21 @@ const debugInfo = computed(() => {
         <div style="margin-bottom: 12px;">
           <label style="display: block; margin-bottom: 4px; font-weight: 600;">Name *</label>
           <input v-model="editModel.name" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
-          <span v-if="formErrors.name" style="color: red; font-size: 12px;">{{ formErrors.name }}</span>
+          <span v-if="formErrors.name" style="color: red; font-size: 12px;">{{ formatError(formErrors.name) }}</span>
         </div>
 
         <!-- Email -->
         <div style="margin-bottom: 12px;">
           <label style="display: block; margin-bottom: 4px; font-weight: 600;">Email *</label>
           <input v-model="editModel.email" type="email" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
-          <span v-if="formErrors.email" style="color: red; font-size: 12px;">{{ formErrors.email }}</span>
+          <span v-if="formErrors.email" style="color: red; font-size: 12px;">{{ formatError(formErrors.email) }}</span>
         </div>
 
         <!-- Age -->
         <div style="margin-bottom: 12px;">
           <label style="display: block; margin-bottom: 4px; font-weight: 600;">Age *</label>
           <input v-model.number="editModel.age" type="number" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
-          <span v-if="formErrors.age" style="color: red; font-size: 12px;">{{ formErrors.age }}</span>
+          <span v-if="formErrors.age" style="color: red; font-size: 12px;">{{ formatError(formErrors.age) }}</span>
         </div>
 
         <!-- Active -->
@@ -293,31 +343,50 @@ const debugInfo = computed(() => {
           </select>
           <div v-if="editModel.position" style="margin-top: 4px; padding: 6px 10px; background: #f0f7ff; border-radius: 4px; font-size: 12px;">
             Nested model: {{ editModel.position.title }} | level: {{ editModel.position.level }} | dept: {{ editModel.position.department }}
+            <span v-if="editModel.position.errors && Object.keys(editModel.position.errors).length" style="display: block; color: red; font-size: 11px; margin-top: 4px;">
+              Position errors: {{ Object.entries(editModel.position.errors).map(([k,v]) => `${k}: ${formatError(v)}`).join(', ') }}
+            </span>
           </div>
-          <span v-if="formErrors.position" style="color: red; font-size: 12px;">{{ formErrors.position }}</span>
+          <span v-if="formErrors.position" style="color: red; font-size: 12px;">{{ formatError(formErrors.position) }}</span>
         </div>
 
-        <!-- Address (nested object) -->
+        <!-- Address (nested MODEL with validation) -->
         <fieldset style="margin-bottom: 12px; padding: 12px; border: 1px solid #ddd; border-radius: 4px;">
-          <legend style="font-weight: 600;">Address (nested object)</legend>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <div>
-              <label style="font-size: 12px;">Street</label>
-              <input v-model="editModel.address.street" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+          <legend style="font-weight: 600;">Address (nested Model with validation)</legend>
+          <span v-if="formErrors.address" style="color: red; font-size: 12px; display: block; margin-bottom: 8px;">{{ formatError(formErrors.address) }}</span>
+          <template v-if="editModel.address">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <label style="font-size: 12px;">Street *</label>
+                <input v-model="editModel.address.street" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+                <span v-if="editModel.address.errors?.street" style="color: red; font-size: 11px;">{{ formatError(editModel.address.errors.street) }}</span>
+              </div>
+              <div>
+                <label style="font-size: 12px;">City *</label>
+                <input v-model="editModel.address.city" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+                <span v-if="editModel.address.errors?.city" style="color: red; font-size: 11px;">{{ formatError(editModel.address.errors.city) }}</span>
+              </div>
+              <div>
+                <label style="font-size: 12px;">ZIP *</label>
+                <input v-model="editModel.address.zip" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+                <span v-if="editModel.address.errors?.zip" style="color: red; font-size: 11px;">{{ formatError(editModel.address.errors.zip) }}</span>
+              </div>
+              <div>
+                <label style="font-size: 12px;">Country * (2-letter code)</label>
+                <input v-model="editModel.address.country" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+                <span v-if="editModel.address.errors?.country" style="color: red; font-size: 11px;">{{ formatError(editModel.address.errors.country) }}</span>
+              </div>
+              <div>
+                <label style="font-size: 12px;">Building</label>
+                <input v-model="editModel.address.building" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+              </div>
+              <div>
+                <label style="font-size: 12px;">Apartment</label>
+                <input v-model="editModel.address.apartment" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+              </div>
             </div>
-            <div>
-              <label style="font-size: 12px;">City</label>
-              <input v-model="editModel.address.city" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div>
-              <label style="font-size: 12px;">ZIP</label>
-              <input v-model="editModel.address.zip" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-            <div>
-              <label style="font-size: 12px;">Country</label>
-              <input v-model="editModel.address.country" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
-            </div>
-          </div>
+          </template>
+          <p v-else style="color: #999; margin: 0;">No address — will be created on save</p>
         </fieldset>
 
         <!-- Settings (nested object) -->
@@ -359,7 +428,7 @@ const debugInfo = computed(() => {
             <input v-model="newTag" @keyup.enter="addTag" placeholder="Add tag..." style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" />
             <button @click="addTag" style="padding: 6px 12px; cursor: pointer;">Add</button>
           </div>
-          <span v-if="formErrors.tags" style="color: red; font-size: 12px;">{{ formErrors.tags }}</span>
+          <span v-if="formErrors.tags" style="color: red; font-size: 12px;">{{ formatError(formErrors.tags) }}</span>
         </fieldset>
 
         <!-- Debug panel -->
@@ -381,6 +450,10 @@ const debugInfo = computed(() => {
           <button @click="saveModel" :disabled="saving"
             style="padding: 10px 24px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
             {{ saving ? 'Saving...' : (editModel.isNew() ? 'Create' : 'Save') }}
+          </button>
+          <button @click="resetModel" v-if="!editModel.isNew()"
+            style="padding: 10px 24px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+            Reset
           </button>
           <button @click="closeForm"
             style="padding: 10px 24px; background: #eee; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">

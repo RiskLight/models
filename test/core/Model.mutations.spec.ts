@@ -32,27 +32,42 @@ describe('Model: mutations', () => {
     expect(user.mutated('unknown', 'hello')).toBe('hello')
   })
 
-  it('mutate() applies mutations to all attributes', () => {
+  it('constructor applies mutations to initial attributes', () => {
     const user = new User({ name: '  John  ', email: 'JOHN@TEST.COM', age: '25.7' })
-    user.mutate()
     expect(user.name).toBe('John')
     expect(user.email).toBe('john@test.com')
     expect(user.age).toBe(25)
   })
 
-  it('mutate(attribute) applies mutation to specific attribute', () => {
-    const user = new User({ name: '  John  ', email: 'JOHN@TEST.COM' })
-    user.mutate('name')
-    expect(user.name).toBe('John')
-    expect(user.email).toBe('JOHN@TEST.COM') // untouched
+  it('mutate() re-applies mutations to all attributes', () => {
+    const user = new User()
+    user._attributes.name = '  Jane  '
+    user._attributes.email = 'JANE@TEST.COM'
+    user._attributes.age = '30.9'
+    user.mutate()
+    expect(user.name).toBe('Jane')
+    expect(user.email).toBe('jane@test.com')
+    expect(user.age).toBe(30)
   })
 
-  it('mutate([...attributes]) applies mutations to multiple attributes', () => {
-    const user = new User({ name: '  John  ', email: 'JOHN@TEST.COM', age: '25.7' })
+  it('mutate(attribute) applies mutation to specific attribute only', () => {
+    const user = new User()
+    user._attributes.name = '  Jane  '
+    user._attributes.email = 'JANE@TEST.COM'
+    user.mutate('name')
+    expect(user.name).toBe('Jane')
+    expect(user.email).toBe('JANE@TEST.COM') // untouched
+  })
+
+  it('mutate([...attributes]) applies mutations to selected attributes', () => {
+    const user = new User()
+    user._attributes.name = '  Jane  '
+    user._attributes.email = 'JANE@TEST.COM'
+    user._attributes.age = '30.9'
     user.mutate(['name', 'email'])
-    expect(user.name).toBe('John')
-    expect(user.email).toBe('john@test.com')
-    expect(user.age).toBe('25.7') // untouched
+    expect(user.name).toBe('Jane')
+    expect(user.email).toBe('jane@test.com')
+    expect(user.age).toBe('30.9') // untouched
   })
 })
 
