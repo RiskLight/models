@@ -57,6 +57,7 @@ export class Collection<M extends Model = Model> {
       routeParameterPattern: this.getDefaultRouteParameterPattern(),
       validationErrorStatus: 422,
       methods: this.getDefaultMethods(),
+      paramsSerializer: null,
     }
   }
 
@@ -129,6 +130,10 @@ export class Collection<M extends Model = Model> {
 
   createRequest(config: any): Request {
     return new Request(config)
+  }
+
+  getParamsSerializer(): ((params: Record<string, any>) => string) | null {
+    return this.getOption('paramsSerializer') || null
   }
 
   // --- Models array ---
@@ -686,33 +691,48 @@ export class Collection<M extends Model = Model> {
   }
 
   fetch(options: Record<string, any> = {}): Promise<any> {
-    const config = () => ({
-      url: options.url || this.getFetchURL(),
-      method: options.method || this._options.methods?.fetch || 'GET',
-      params: _defaults({}, options.params, this.getPaginationQuery()),
-      headers: options.headers || {},
-    })
+    const config = () => {
+      const cfg: Record<string, any> = {
+        url: options.url || this.getFetchURL(),
+        method: options.method || this.getFetchMethod(),
+        params: _defaults({}, options.params, this.getPaginationQuery(), this.getFetchQuery()),
+        headers: _defaults({}, options.headers, this.getFetchHeaders()),
+      }
+      const serializer = this.getParamsSerializer()
+      if (serializer) cfg.paramsSerializer = serializer
+      return cfg
+    }
     return this.request(config, this.onFetch, this.onFetchSuccess, this.onFetchFailure)
   }
 
   save(options: Record<string, any> = {}): Promise<any> {
-    const config = () => ({
-      url: options.url || this.getSaveURL(),
-      method: options.method || this._options.methods?.save || 'POST',
-      data: options.data || this.getSaveData(),
-      headers: options.headers || {},
-    })
+    const config = () => {
+      const cfg: Record<string, any> = {
+        url: options.url || this.getSaveURL(),
+        method: options.method || this.getSaveMethod(),
+        data: options.data || this.getSaveData(),
+        headers: _defaults({}, options.headers, this.getSaveHeaders()),
+      }
+      const serializer = this.getParamsSerializer()
+      if (serializer) cfg.paramsSerializer = serializer
+      return cfg
+    }
     return this.request(config, this.onSave, this.onSaveSuccess, this.onSaveFailure)
   }
 
   delete(options: Record<string, any> = {}): Promise<any> {
-    const config = () => ({
-      url: options.url || this.getDeleteURL(),
-      method: options.method || this._options.methods?.delete || 'DELETE',
-      data: options.data || this.getDeleteBody(),
-      params: _defaults({}, options.params, this.getDeleteQuery()),
-      headers: options.headers || {},
-    })
+    const config = () => {
+      const cfg: Record<string, any> = {
+        url: options.url || this.getDeleteURL(),
+        method: options.method || this.getDeleteMethod(),
+        data: options.data || this.getDeleteBody(),
+        params: _defaults({}, options.params, this.getDeleteQuery()),
+        headers: _defaults({}, options.headers, this.getDeleteHeaders()),
+      }
+      const serializer = this.getParamsSerializer()
+      if (serializer) cfg.paramsSerializer = serializer
+      return cfg
+    }
     return this.request(config, this.onDelete, this.onDeleteSuccess, this.onDeleteFailure)
   }
 }

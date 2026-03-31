@@ -69,6 +69,11 @@ const openEdit = async (user: User) => {
   try {
     await model.fetch()
     model.sync()
+
+    // Test: undeclared field set during form load (not via button click)
+    model.set('loadedFlag', true);
+    model.runtimeNote = 'set via dot notation on load'
+
     editModel.value = model
     formErrors.value = {}
     addLog(`Opened edit for "${model.name}" (id: ${model.id})`)
