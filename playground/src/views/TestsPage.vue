@@ -157,6 +157,28 @@ const testBulkDelete = async () => {
   }
 }
 
+const bulkEditMode = ref(false)
+
+const testBulkSave = async () => {
+  // Get models that have been changed
+  const changed = bulkCollection.models.filter(m => m.changed())
+  if (changed.length === 0) {
+    addLog('Bulk save: no models changed')
+    return
+  }
+
+  addLog(`Bulk save: ${changed.length} models changed, saving...`)
+
+  try {
+    await bulkCollection.save()
+    addLog(`Bulk save: success`)
+    bulkEditMode.value = false
+    await fetchBulk()
+  } catch (e: any) {
+    addLog(`Bulk save error: ${e.message}`)
+  }
+}
+
 // ============================================
 // TEST 4: EVENTS
 // ============================================
@@ -300,6 +322,14 @@ const formatError = (err: any): string => {
           style="padding: 8px 16px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;">
           Fetch Users
         </button>
+        <button @click="bulkEditMode = !bulkEditMode"
+          style="padding: 8px 16px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          {{ bulkEditMode ? 'Cancel Edit' : 'Edit Mode' }}
+        </button>
+        <button v-if="bulkEditMode" @click="testBulkSave"
+          style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Save All Changed
+        </button>
         <button @click="testBulkDelete" :disabled="bulkDeleteSelected.length === 0"
           style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">
           Delete Selected ({{ bulkDeleteSelected.length }})
@@ -314,16 +344,36 @@ const formatError = (err: any): string => {
             <th style="padding: 6px; text-align: left;">ID</th>
             <th style="padding: 6px; text-align: left;">Name</th>
             <th style="padding: 6px; text-align: left;">Email</th>
+            <th style="padding: 6px; text-align: left;">Age</th>
+            <th v-if="bulkEditMode" style="padding: 6px; text-align: left;">Changed?</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in bulkCollection.models" :key="user.id" style="border-bottom: 1px solid #eee;">
+          <tr v-for="user in bulkCollection.models" :key="user.id"
+            :style="{ borderBottom: '1px solid #eee', background: user.changed() ? '#fff8e1' : 'transparent' }">
             <td style="padding: 6px;">
               <input type="checkbox" :checked="bulkDeleteSelected.includes(user.id as number)" @change="toggleBulkSelect(user.id as number)" />
             </td>
             <td style="padding: 6px;">{{ user.id }}</td>
-            <td style="padding: 6px;">{{ user.name }}</td>
-            <td style="padding: 6px;">{{ user.email }}</td>
+            <td style="padding: 6px;">
+              <input v-if="bulkEditMode" v-model="user.name"
+                style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box;" />
+              <span v-else>{{ user.name }}</span>
+            </td>
+            <td style="padding: 6px;">
+              <input v-if="bulkEditMode" v-model="user.email"
+                style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box;" />
+              <span v-else>{{ user.email }}</span>
+            </td>
+            <td style="padding: 6px;">
+              <input v-if="bulkEditMode" v-model.number="user.age" type="number"
+                style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;" />
+              <span v-else>{{ user.age }}</span>
+            </td>
+            <td v-if="bulkEditMode" style="padding: 6px; font-size: 12px;">
+              <span v-if="user.changed()" style="color: #ff9800;">{{ (user.changed() as string[]).join(', ') }}</span>
+              <span v-else style="color: #ccc;">—</span>
+            </td>
           </tr>
         </tbody>
       </table>

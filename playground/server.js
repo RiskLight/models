@@ -65,6 +65,26 @@ app.post('/test-validation', (req, res) => {
   res.json({ success: true, data: body })
 })
 
+// --- Bulk save endpoint ---
+app.patch('/users/bulk', (req, res) => {
+  const items = req.body
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Expected array of objects' })
+  }
+
+  const db = router.db
+  const results = []
+  for (const item of items) {
+    if (item.id) {
+      db.get('users').find({ id: item.id }).assign(item).write()
+      results.push(db.get('users').find({ id: item.id }).value())
+    }
+  }
+
+  console.log(`[BULK SAVE] Updated ${results.length} users`)
+  res.json(results)
+})
+
 // --- Bulk delete endpoint ---
 app.delete('/users/bulk', (req, res) => {
   const ids = req.body

@@ -9,8 +9,12 @@ export class Users extends Collection<User> {
   routes() {
     return {
       fetch: `${API}/users`,
+      save: `${API}/users/bulk`,
+      delete: `${API}/users/bulk`,
     }
   }
+
+  getSaveMethod(): string { return 'PATCH' }
 
   // json-server uses _page/_limit instead of page/limit
   getPaginationQuery(): Record<string, any> {
