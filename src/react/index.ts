@@ -12,7 +12,7 @@ import { Model } from '../core/Model.js'
  *   const state = useModelState(user)
  *   return <div>{state.name}</div>
  */
-export function useModelState(model: InstanceType<typeof Model>): Record<string, any> {
+export function useModelState<A extends Record<string, any> = Record<string, any>>(model: Model<A>): A & Record<string, any> {
   const subscribe = (callback: () => void) => {
     const handler = () => callback()
     const events = ['change', 'sync', 'reset', 'fetch', 'save.success', 'delete']
@@ -37,7 +37,7 @@ export function useModelState(model: InstanceType<typeof Model>): Record<string,
 
   // Deep serialize for snapshot comparison — catches nested object mutations
   let lastJson = ''
-  let snapshot: Record<string, any> = {}
+  let snapshot: A & Record<string, any> = {} as A & Record<string, any>
 
   const getSnapshot = () => {
     const json = JSON.stringify(model._attributes, (_key, value) => {

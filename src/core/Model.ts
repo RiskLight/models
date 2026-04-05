@@ -13,7 +13,7 @@ let _uidCounter = 0
 
 
 
-export class Model {
+export class Model<A extends Record<string, any> = Record<string, any>> {
   [key: string]: any
 
   // --- Internal state ---
@@ -41,7 +41,7 @@ export class Model {
   static REQUEST_SKIP = 1
   static REQUEST_REDUNDANT = 2
 
-  constructor(attributes?: Record<string, any>, collection?: any, options?: Record<string, any>) {
+  constructor(attributes?: Partial<A> & Record<string, any>, collection?: any, options?: Record<string, any>) {
     this._uid = `m${++_uidCounter}`
 
     // Merge options: class defaults < getDefaultOptions < options() < constructor options
@@ -144,7 +144,7 @@ export class Model {
 
   // --- Overridable configuration ---
 
-  defaults(): Record<string, any> { return {} }
+  defaults(): Partial<A> { return {} }
   schema(): any { return null }
   validation(): Record<string, any> { return {} }
   mutations(): Record<string, any> { return {} }
@@ -244,10 +244,14 @@ export class Model {
 
   // --- Attribute access ---
 
+  get<K extends keyof A>(key: K, fallback?: A[K]): A[K]
+  get(key: string, fallback?: any): any
   get(key: string, fallback?: any): any {
     return key in this._attributes ? this._attributes[key] : fallback
   }
 
+  set<K extends keyof A>(key: K, value: A[K]): A[K]
+  set(key: string | Record<string, any>, value?: any): any
   set(key: string | Record<string, any>, value?: any): any {
     if (isPlainObject(key)) {
       for (const [k, v] of Object.entries(key as Record<string, any>)) {
@@ -265,12 +269,14 @@ export class Model {
 
   // --- Saved state ---
 
+  saved<K extends keyof A>(key: K, fallback?: A[K]): A[K] | undefined
+  saved(key: string, fallback?: any): any
   saved(key: string, fallback?: any): any {
     return key in this._reference ? this._reference[key] : fallback
   }
 
-  get $(): Record<string, any> {
-    return { ...this._reference }
+  get $(): Partial<A> & Record<string, any> {
+    return { ...this._reference } as Partial<A> & Record<string, any>
   }
 
   // --- Sync / Reset / Changed ---
@@ -344,7 +350,7 @@ export class Model {
     this.fatal = false
   }
 
-  assign(attributes: Record<string, any>): void {
+  assign(attributes: Partial<A> & Record<string, any>): void {
     const defs = this._cache.defaults || this.defaults()
     const merged = { ...defs, ...attributes }
 
@@ -534,8 +540,8 @@ export class Model {
     return new Constructor({ ...this._attributes }, undefined, { ...this._options })
   }
 
-  toJSON(): Record<string, any> {
-    return { ...this._attributes }
+  toJSON(): A & Record<string, any> {
+    return { ...this._attributes } as A & Record<string, any>
   }
 
   // --- HTTP: route resolution ---
