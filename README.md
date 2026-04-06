@@ -358,6 +358,33 @@ class User extends Model {
 }
 ```
 
+## Undeclared attribute protection
+
+Writing to an attribute not declared in `defaults()` triggers a console warning:
+
+```ts
+class User extends Model {
+  defaults() { return { name: '', email: '' } }
+}
+
+const user = new User()
+user.phone = '123'  // ⚠ [models] Undeclared "phone" on User
+```
+
+The attribute is still stored — but the warning helps catch typos and unintended properties. Control this via the `debug` option:
+
+```ts
+class User extends Model {
+  options() {
+    return {
+      debug: true,       // console.warn (default)
+      // debug: 'strict', // throw Error instead
+      // debug: false,    // silent
+    }
+  }
+}
+```
+
 ## Events
 
 ```ts
