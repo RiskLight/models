@@ -44,4 +44,4 @@ await genres.fetchAll()           // GET /api/genre → genres.models / genres.i
 await Genre.fetchAll()            // { data: GenreAttrs[] } without instantiating models
 ```
 
-Routes: `fetch`/`update`/`delete` use `{route}/{identifier}`, `save` on a new model posts to `{route}`. Declare `_id` in `defaults()` and it behaves like any other attribute.
+Routes: `fetch`/`update`/`delete` use `{route}/{identifier}`, `save` on a new model posts to `{route}`. The identifier defaults to `_id`; pass `identifier` to `configureNuxtModels()` for `id` or anything else.

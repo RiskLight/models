@@ -14,6 +14,8 @@ user.set('name', 'Bob')
 user.set({ name: 'Bob', email: 'bob@test.com' })
 ```
 
+Attribute names may start with an underscore as long as they are declared in `defaults()` (Mongo's `_id` is the usual case). Undeclared `_`-prefixed keys are treated as private instance fields and never reach the attribute store.
+
 ## State management
 
 ```ts

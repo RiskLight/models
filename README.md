@@ -100,6 +100,8 @@ user.set('name', 'Bob')
 user.set({ name: 'Bob', email: 'bob@test.com' })
 ```
 
+Attribute names may start with an underscore as long as they are declared in `defaults()` (Mongo's `_id` is the usual case). Undeclared `_`-prefixed keys are treated as private instance fields and never reach the attribute store.
+
 ## State management
 
 ```ts
@@ -643,7 +645,7 @@ await genres.fetchAll()           // GET /api/genre → genres.models / genres.i
 await Genre.fetchAll()            // { data: GenreAttrs[] } without instantiating models
 ```
 
-Routes: `fetch`/`update`/`delete` use `{route}/{identifier}`, `save` on a new model posts to `{route}`. Declare `_id` in `defaults()` and it behaves like any other attribute.
+Routes: `fetch`/`update`/`delete` use `{route}/{identifier}`, `save` on a new model posts to `{route}`. The identifier defaults to `_id`; pass `identifier` to `configureNuxtModels()` for `id` or anything else.
 
 ### Vanilla JS / Node.js
 

@@ -22,5 +22,5 @@ features:
   - title: REST out of the box
     details: fetch / save / delete / pagination / bulk operations with a pluggable HTTP layer.
   - title: Nuxt adapter
-    details: SSR-safe fetching through $fetch, CSRF-aware on the client, Mongo _id friendly.
+    details: SSR-safe fetching through $fetch, CSRF-aware on the client, routes derived from a static route.
 ---
