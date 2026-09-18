@@ -80,6 +80,9 @@ export interface Identified {
   _id?: string
 }
 
+/** Plain attribute object of a model class, as returned by `toJSON()` and `NuxtCollection#items`. */
+export type Attributes<M extends Model<any>> = ReturnType<M['toJSON']>
+
 /**
  * Model bound to a REST resource by a static `route`:
  *   fetch  GET    {route}/{_id}
@@ -156,11 +159,11 @@ export class NuxtCollection<M extends NuxtModel<any>> extends Collection<M> {
     return new NuxtRequest(config)
   }
 
-  get items(): ReturnType<M['toJSON']>[] {
-    return this.models.map((model) => model.toJSON() as ReturnType<M['toJSON']>)
+  get items(): Attributes<M>[] {
+    return this.models.map((model) => model.toJSON() as Attributes<M>)
   }
 
-  async fetchAll(): Promise<ReturnType<M['toJSON']>[]> {
+  async fetchAll(): Promise<Attributes<M>[]> {
     await this.fetch()
     return this.items
   }

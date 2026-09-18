@@ -168,3 +168,14 @@ describe('custom unwrap and identifier', () => {
     expect(post.title).toBe('hello')
   })
 })
+
+describe('type exports', () => {
+  it('root re-exports the adapter types (compile-time check)', async () => {
+    const root = await import('../../src')
+    const nuxt = await import('../../src/nuxt')
+    type Row = import('../../src').Attributes<InstanceType<typeof nuxt.NuxtModel>>
+    const row: Row = { _id: 'x' }
+    expect(row._id).toBe('x')
+    expect(typeof root.Model).toBe('function')
+  })
+})
