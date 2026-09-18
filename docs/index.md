@@ -16,7 +16,7 @@ hero:
       link: https://github.com/RiskLight/models
 features:
   - title: Framework-agnostic
-    details: Proxy-based reactivity that plugs into Vue 3, React or nothing at all.
+    details: Proxy-based reactivity that plugs into Vue 3, React, Nuxt or nothing at all.
   - title: Validation built in
     details: Composable rules or a Zod schema, localized messages, 422 parsing into model.errors.
   - title: REST out of the box

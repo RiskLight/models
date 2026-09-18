@@ -1,6 +1,6 @@
 # HTTP
 
-All HTTP is done via axios under the hood.
+HTTP goes through `createRequest()`: axios by default, or whatever the adapter provides (the Nuxt adapter uses the fetcher you configure). Override `createRequest()` on a model or collection to plug in anything else.
 
 ## Model
 
