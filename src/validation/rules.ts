@@ -30,7 +30,6 @@ export class Rule {
     return this._resolveMessage ? this._resolveMessage(value, attribute, model) : this._message
   }
 
-  /** Both rules must pass. The message comes from the rule that failed. */
   and(other: Rule): Rule {
     const left: Rule = this
     return new Rule(
@@ -43,7 +42,6 @@ export class Rule {
     )
   }
 
-  /** At least one rule must pass. The message comes from the first rule. */
   or(other: Rule): Rule {
     const left: Rule = this
     return new Rule(
@@ -53,7 +51,6 @@ export class Rule {
     )
   }
 
-  /** Override the message for this rule, including combined rules. */
   format(message: string): Rule {
     return new Rule(this._test, message)
   }

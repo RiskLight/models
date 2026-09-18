@@ -1,7 +1,3 @@
-// @risklight/models/nuxt — Nuxt 3/4 adapter
-// Framework-agnostic on purpose: nothing from `nuxt/app` is imported here.
-// The app wires its fetcher once (usually in a Nuxt plugin), then extends NuxtModel / NuxtCollection.
-
 import '../vue/index.js'
 import { Model } from '../core/Model.js'
 import { Collection } from '../core/Collection.js'
@@ -25,11 +21,8 @@ export interface NuxtRawResponse {
 export type NuxtFetcher = (config: NuxtRequestConfig) => Promise<NuxtRawResponse>
 
 export interface NuxtModelsOptions {
-  /** Performs the HTTP call. Typically wraps `$fetch.raw` on the server and `$csrfFetch.raw` on the client. */
   fetcher: NuxtFetcher
-  /** Extracts the payload the models should consume. Default unwraps `{ data }` envelopes. */
   unwrap?: (payload: unknown) => unknown
-  /** Primary key attribute. Default `_id` (Mongo). */
   identifier?: string
 }
 
@@ -79,17 +72,7 @@ export class NuxtRequest {
 export interface Identified {
   _id?: string
 }
-
-/** Plain attribute object of a model class, as returned by `toJSON()` and `NuxtCollection#items`. */
 export type Attributes<M extends Model<any>> = ReturnType<M['toJSON']>
-
-/**
- * Model bound to a REST resource by a static `route`:
- *   fetch  GET    {route}/{_id}
- *   create POST   {route}
- *   update PUT    {route}/{_id}
- *   delete DELETE {route}/{_id}
- */
 export class NuxtModel<A extends Identified = Identified> extends Model<A> {
   static route = ''
 

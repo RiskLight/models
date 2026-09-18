@@ -85,8 +85,6 @@ export class Model<A extends Record<string, any> = Record<string, any>> {
 
     // Return Proxy that intercepts ALL property access
     const STATE_PROPS = ['loading', 'saving', 'deleting', 'fatal']
-    // An "_"-prefixed key is an attribute only when the model declares it in defaults()
-    // and it does not collide with an internal field (e.g. Mongo's _id).
     const isDeclaredUnderscoreAttribute = (target: any, key: string) =>
       key.startsWith('_') &&
       !(key in target) &&
