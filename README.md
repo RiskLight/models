@@ -100,6 +100,8 @@ user.set('name', 'Bob')
 user.set({ name: 'Bob', email: 'bob@test.com' })
 ```
 
+Attribute access is typed from the generic: with `class User extends Model<UserAttrs>`, `user.name` is `string`, `user.age` is `number`, and assigning the wrong type is a compile error. A model declared without a generic keeps `Record<string, any>` attributes.
+
 Attribute names may start with an underscore as long as they are declared in `defaults()` (Mongo's `_id` is the usual case). Undeclared `_`-prefixed keys are treated as private instance fields and never reach the attribute store.
 
 ## State management
@@ -680,6 +682,17 @@ import type {
   RequestSuccessCallback,
   RequestFailureCallback,
 } from '@risklight/models'
+```
+
+### Base classes and constructors
+
+`Model` and `NuxtModel` are typed constructors that return `ModelBase<A> & A` / `NuxtModelBase<A> & A`, which is what gives dot access its types. The underlying classes and constructor types are exported for tooling and generic constraints:
+
+```ts
+import type { ModelBase, ModelConstructor } from '@risklight/models'
+import type { NuxtModelBase, NuxtModelConstructor } from '@risklight/models/nuxt'
+
+function describe<M extends ModelBase<any>>(model: M) { return model.toJSON() }
 ```
 
 ### Nuxt adapter types

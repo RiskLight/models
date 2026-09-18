@@ -1,5 +1,5 @@
 import '../vue/index.js'
-import { Model } from '../core/Model.js'
+import { ModelBase } from '../core/Model.js'
 import { Collection } from '../core/Collection.js'
 import { Response } from '../core/Response.js'
 import { RequestError } from '../core/errors.js'
@@ -72,8 +72,8 @@ export class NuxtRequest {
 export interface Identified {
   _id?: string
 }
-export type Attributes<M extends Model<any>> = ReturnType<M['toJSON']>
-export class NuxtModel<A extends Identified = Identified> extends Model<A> {
+export type Attributes<M extends ModelBase<any>> = ReturnType<M['toJSON']>
+export class NuxtModelBase<A extends Record<string, any> = Identified> extends ModelBase<A> {
   static route = ''
 
   static async fetchAll<T>(this: { route: string }): Promise<{ data: T[] }> {
@@ -89,7 +89,7 @@ export class NuxtModel<A extends Identified = Identified> extends Model<A> {
   }
 
   protected get modelRoute(): string {
-    return (this.constructor as typeof NuxtModel).route
+    return (this.constructor as typeof NuxtModelBase).route
   }
 
   routes() {
@@ -133,7 +133,7 @@ export class NuxtModel<A extends Identified = Identified> extends Model<A> {
   }
 }
 
-export class NuxtCollection<M extends NuxtModel<any>> extends Collection<M> {
+export class NuxtCollection<M extends NuxtModelBase<any>> extends Collection<M> {
   routes() {
     return { fetch: (this.model() as unknown as { route: string }).route }
   }
@@ -151,3 +151,17 @@ export class NuxtCollection<M extends NuxtModel<any>> extends Collection<M> {
     return this.items
   }
 }
+
+type NuxtModelStatics = { [K in keyof typeof NuxtModelBase]: (typeof NuxtModelBase)[K] }
+
+export interface NuxtModelConstructor extends NuxtModelStatics {
+  new <A extends Record<string, any> = Identified>(
+    attributes?: Partial<A> & Record<string, any>,
+    collection?: any,
+    options?: Record<string, any>,
+  ): NuxtModelBase<A> & A
+}
+
+export const NuxtModel: NuxtModelConstructor = NuxtModelBase as unknown as NuxtModelConstructor
+
+export type NuxtModel<A extends Record<string, any> = Identified> = NuxtModelBase<A> & A

@@ -13,8 +13,7 @@ let _uidCounter = 0
 
 
 
-export class Model<A extends Record<string, any> = Record<string, any>> {
-  [key: string]: any
+export class ModelBase<A extends Record<string, any> = Record<string, any>> {
 
   // --- Internal state ---
   _attributes: Record<string, any> = {}
@@ -658,9 +657,9 @@ export class Model<A extends Record<string, any> = Record<string, any>> {
 
   onFetch(): Promise<number> {
     return new Promise((resolve) => {
-      if (this.loading) return resolve(Model.REQUEST_SKIP)
+      if (this.loading) return resolve(ModelBase.REQUEST_SKIP)
       this.loading = true
-      resolve(Model.REQUEST_CONTINUE)
+      resolve(ModelBase.REQUEST_CONTINUE)
     })
   }
 
@@ -684,10 +683,10 @@ export class Model<A extends Record<string, any> = Record<string, any>> {
     return new Promise((resolve, reject) => {
       this.emit('save', { error: null })
 
-      if (this.saving) return resolve(Model.REQUEST_SKIP)
+      if (this.saving) return resolve(ModelBase.REQUEST_SKIP)
 
       if (!this.getOption('saveUnchanged') && !this.changed()) {
-        return resolve(Model.REQUEST_REDUNDANT)
+        return resolve(ModelBase.REQUEST_REDUNDANT)
       }
 
       this.saving = true
@@ -698,7 +697,7 @@ export class Model<A extends Record<string, any> = Record<string, any>> {
       }
 
       this.validate().then(() => {
-        if (isEmpty(this._errors)) return resolve(Model.REQUEST_CONTINUE)
+        if (isEmpty(this._errors)) return resolve(ModelBase.REQUEST_CONTINUE)
         this.saving = false
         reject(this.createValidationError(this._errors))
       })
@@ -768,9 +767,9 @@ export class Model<A extends Record<string, any> = Record<string, any>> {
 
   onDelete(): Promise<number> {
     return new Promise((resolve) => {
-      if (this.deleting) return resolve(Model.REQUEST_SKIP)
+      if (this.deleting) return resolve(ModelBase.REQUEST_SKIP)
       this.deleting = true
-      resolve(Model.REQUEST_CONTINUE)
+      resolve(ModelBase.REQUEST_CONTINUE)
     })
   }
 
@@ -794,10 +793,10 @@ export class Model<A extends Record<string, any> = Record<string, any>> {
     return new Promise((resolve, reject) => {
       onRequest.call(this).then((status: number) => {
         switch (status) {
-          case Model.REQUEST_SKIP:
+          case ModelBase.REQUEST_SKIP:
             resolve(null)
             return
-          case Model.REQUEST_REDUNDANT:
+          case ModelBase.REQUEST_REDUNDANT:
             onSuccess.call(this, null)
             resolve(null)
             return
@@ -1085,3 +1084,17 @@ export class Model<A extends Record<string, any> = Record<string, any>> {
     return new ResponseError(message, response)
   }
 }
+
+type ModelStatics = { [K in keyof typeof ModelBase]: (typeof ModelBase)[K] }
+
+export interface ModelConstructor extends ModelStatics {
+  new <A extends Record<string, any> = Record<string, any>>(
+    attributes?: Partial<A> & Record<string, any>,
+    collection?: any,
+    options?: Record<string, any>,
+  ): ModelBase<A> & A
+}
+
+export const Model: ModelConstructor = ModelBase as unknown as ModelConstructor
+
+export type Model<A extends Record<string, any> = Record<string, any>> = ModelBase<A> & A

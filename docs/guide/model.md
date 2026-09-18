@@ -14,6 +14,8 @@ user.set('name', 'Bob')
 user.set({ name: 'Bob', email: 'bob@test.com' })
 ```
 
+Attribute access is typed from the generic: with `class User extends Model<UserAttrs>`, `user.name` is `string`, `user.age` is `number`, and assigning the wrong type is a compile error. A model declared without a generic keeps `Record<string, any>` attributes.
+
 Attribute names may start with an underscore as long as they are declared in `defaults()` (Mongo's `_id` is the usual case). Undeclared `_`-prefixed keys are treated as private instance fields and never reach the attribute store.
 
 ## State management

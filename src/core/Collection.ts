@@ -1,13 +1,13 @@
 // @risklight/models — Collection
 
 import { get, set as _set, defaults as _defaults, isEmpty, isFunction } from 'lodash-es'
-import { Model } from './Model.js'
+import { Model, ModelBase } from './Model.js'
 import { Request } from './Request.js'
 import { ProxyResponse } from './ProxyResponse.js'
 
 type Listener = (context: Record<string, any>) => void
 
-export class Collection<M extends Model = Model> {
+export class Collection<M extends ModelBase = ModelBase> {
   [key: string]: any
 
   _models: M[] = []
@@ -148,7 +148,7 @@ export class Collection<M extends Model = Model> {
 
   private _addModel(modelOrAttrs: M | Record<string, any>, emitEvent: boolean = true): M {
     let m: M
-    if (modelOrAttrs instanceof Model) {
+    if (modelOrAttrs instanceof ModelBase) {
       m = modelOrAttrs as M
     } else {
       m = this.createModel(modelOrAttrs)

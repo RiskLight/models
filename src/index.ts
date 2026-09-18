@@ -1,4 +1,4 @@
-export { Model } from './core/Model.js'
+export { Model, ModelBase, type ModelConstructor } from './core/Model.js'
 export { Collection } from './core/Collection.js'
 export { Request } from './core/Request.js'
 export { Response, type ResponseData } from './core/Response.js'

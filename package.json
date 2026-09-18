@@ -1,6 +1,6 @@
 {
   "name": "@risklight/models",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "type": "module",
   "description": "Framework-agnostic Model/Collection with Proxy-based reactivity and Zod validation",
   "repository": {
