@@ -106,19 +106,6 @@ export class NuxtModel<A extends Identified = Identified> extends Model<A> {
     return (this.constructor as typeof NuxtModel).route
   }
 
-  /**
-   * The core Proxy treats every "_"-prefixed key as a private field, so `model._id`
-   * would bypass the attribute store. Expose the identifier as a real accessor instead.
-   */
-  get _id(): string | undefined {
-    return this.get(this.identifierKey)
-  }
-
-  set _id(value: string | undefined) {
-    if (!this._booted) return
-    this.set(this.identifierKey, value)
-  }
-
   routes() {
     return {
       fetch: `${this.modelRoute}/{${this.identifierKey}}`,

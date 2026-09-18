@@ -144,3 +144,33 @@ describe('Model: options merge', () => {
     expect(user.getOption('identifier')).toBe('uuid')
   })
 })
+
+describe('Model: underscore attributes declared in defaults()', () => {
+  class Doc extends Model {
+    defaults() { return { _id: '', title: '' } }
+  }
+
+  it('reads and writes _id through dot access when declared', () => {
+    const doc = new Doc({ _id: 'a1', title: 'x' })
+    expect(doc._id).toBe('a1')
+    doc._id = 'b2'
+    expect(doc.get('_id')).toBe('b2')
+    expect(doc.changed()).toEqual(['_id'])
+  })
+
+  it('keeps internal fields private even when they collide by name', () => {
+    class Weird extends Model {
+      defaults() { return { _attributes: 'nope', _reference: 'nope' } }
+    }
+    const weird = new Weird()
+    expect(typeof weird._attributes).toBe('object')
+    expect(typeof weird._reference).toBe('object')
+  })
+
+  it('leaves undeclared underscore keys as plain instance properties', () => {
+    const doc = new Doc()
+    ;(doc as any)._scratch = 42
+    expect((doc as any)._scratch).toBe(42)
+    expect(doc.has('_scratch')).toBe(false)
+  })
+})

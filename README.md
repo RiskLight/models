@@ -285,7 +285,7 @@ await genres.fetchAll()           // GET /api/genre → genres.models / genres.i
 await Genre.fetchAll()            // { data: GenreAttrs[] } without instantiating models
 ```
 
-Routes: `fetch`/`update`/`delete` use `{route}/{identifier}`, `save` on a new model posts to `{route}`. `_id` is exposed as a real accessor because the core Proxy treats `_`-prefixed keys as private.
+Routes: `fetch`/`update`/`delete` use `{route}/{identifier}`, `save` on a new model posts to `{route}`. Declare `_id` in `defaults()` and it behaves like any other attribute.
 
 ## HTTP (CRUD)
 

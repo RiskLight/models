@@ -85,11 +85,23 @@ export class Model<A extends Record<string, any> = Record<string, any>> {
 
     // Return Proxy that intercepts ALL property access
     const STATE_PROPS = ['loading', 'saving', 'deleting', 'fatal']
+    // An "_"-prefixed key is an attribute only when the model declares it in defaults()
+    // and it does not collide with an internal field (e.g. Mongo's _id).
+    const isDeclaredUnderscoreAttribute = (target: any, key: string) =>
+      key.startsWith('_') &&
+      !(key in target) &&
+      target._cache?.defaults != null &&
+      Object.prototype.hasOwnProperty.call(target._cache.defaults, key)
 
     return new Proxy(this, {
       set(target, key: string | symbol, value) {
         if (typeof key !== 'string') {
           (target as any)[key] = value
+          return true
+        }
+
+        if (isDeclaredUnderscoreAttribute(target, key)) {
+          target._setAttribute(key, value)
           return true
         }
 
@@ -119,6 +131,11 @@ export class Model<A extends Record<string, any> = Record<string, any>> {
       get(target, key: string | symbol) {
         if (typeof key !== 'string') {
           return (target as any)[key]
+        }
+
+        if (isDeclaredUnderscoreAttribute(target, key)) {
+          target._trackSignal(key)
+          return target._attributes[key]
         }
 
         // Internal/private, methods, known non-attribute properties
