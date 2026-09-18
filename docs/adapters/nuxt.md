@@ -21,8 +21,9 @@ export default defineNuxtPlugin((nuxtApp) => {
 
 ```ts
 import { NuxtModel, NuxtCollection } from '@risklight/models/nuxt'
+import type { Identified } from '@risklight/models'
 
-interface GenreAttrs { _id?: string; name: string; description?: string }
+interface GenreAttrs extends Identified { name: string; description?: string }
 
 class Genre extends NuxtModel<GenreAttrs> {
   static route = '/api/genre'

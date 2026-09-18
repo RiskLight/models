@@ -5,8 +5,6 @@ import { Response } from '../core/Response.js'
 import { RequestError } from '../core/errors.js'
 import type { Identified, Attributes } from '../core/types.js'
 
-export type { Identified, Attributes }
-
 export interface NuxtRequestConfig {
   url: string
   method: string

@@ -1,6 +1,7 @@
 import { describe, it, expect, expectTypeOf } from 'vitest'
 import { Model, Collection } from '../../src'
-import { NuxtModel, NuxtCollection, configureNuxtModels, type Attributes } from '../../src/nuxt'
+import { NuxtModel, NuxtCollection, configureNuxtModels } from '../../src/nuxt'
+import type { Attributes } from '../../src'
 
 interface UserAttrs { id: number; name: string; email: string; tags: string[] }
 
