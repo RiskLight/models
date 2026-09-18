@@ -31,10 +31,10 @@ function describe<M extends ModelBase<any>>(model: M) { return model.toJSON() }
 Exported from `@risklight/models/nuxt` and re-exported as types from the root:
 
 ```ts
-import type { NuxtFetcher, NuxtRequestConfig, NuxtRawResponse, NuxtModelsOptions, Identified, Attributes } from '@risklight/models'
+import type { NuxtFetcher, NuxtRequestConfig, NuxtRawResponse, NuxtModelsOptions, Attributes } from '@risklight/models'
 
 const fetcher: NuxtFetcher = async ({ url, method, data, params, headers }: NuxtRequestConfig): Promise<NuxtRawResponse> => { /* ... */ }
 
-interface GenreAttrs extends Identified { name: string }      // _id?: string comes from Identified
+interface GenreAttrs extends Identified { name: string }      // Identified ({ _id?: string }) is a core type
 type GenreRow = Attributes<Genre>                             // what NuxtCollection#items yields
 ```

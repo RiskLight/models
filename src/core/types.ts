@@ -25,3 +25,7 @@ export type Mutation = (value: any) => any
 export type RouteResolver = (route: string, parameters: Record<string, any>) => string
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+
+export interface Identified {
+  _id?: string
+}
