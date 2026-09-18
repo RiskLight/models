@@ -21,6 +21,6 @@ features:
     details: Composable rules or a Zod schema, localized messages, 422 parsing into model.errors.
   - title: REST out of the box
     details: fetch / save / delete / pagination / bulk operations with a pluggable HTTP layer.
-  - title: Nuxt adapter
-    details: SSR-safe fetching through $fetch, CSRF-aware on the client, routes derived from a static route.
+  - title: REST resources
+    details: Models bound to a route with a pluggable transport. Nuxt, Vue, React or plain fetch.
 ---

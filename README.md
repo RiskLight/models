@@ -344,6 +344,47 @@ users.models[2].deleting = true
 await users.delete()
 ```
 
+## REST resources
+
+`ResourceModel` and `ResourceCollection` bind a model to a REST resource by a static `route` and route HTTP through a transport you configure once. They work in any framework: plain JS, Vue, React or Nuxt. Without `configureTransport()` they fall back to the default axios request.
+
+```ts
+import { ResourceModel, ResourceCollection, configureTransport } from '@risklight/models'
+import type { Identified } from '@risklight/models'
+
+configureTransport({
+  fetcher: async ({ url, method, data, params, headers }) => {
+    const res = await fetch(url + '?' + new URLSearchParams(params as any), { method, body: data ? JSON.stringify(data) : undefined, headers })
+    return { data: await res.json(), status: res.status }
+  },
+  // unwrap: (payload) => payload.data   // default: unwraps { data } envelopes
+  // identifier: '_id'                   // default
+})
+
+interface GenreAttrs extends Identified { name: string; description?: string }
+
+class Genre extends ResourceModel<GenreAttrs> {
+  static route = '/api/genre'
+  defaults(): Partial<GenreAttrs> { return { _id: '', name: '', description: '' } }
+}
+
+class Genres extends ResourceCollection<Genre> {
+  model() { return Genre }
+}
+
+const genre = new Genre()
+await genre.fetchOne('a1')        // GET  /api/genre/a1
+genre.name = 'Landscape'
+await genre.save()                // PUT  /api/genre/a1   (POST /api/genre when new, without the identifier)
+await genre.delete()              // DELETE /api/genre/a1
+
+const genres = new Genres()
+await genres.fetchAll()           // GET /api/genre → genres.models / genres.items (plain objects)
+await Genre.fetchAll()            // { data: GenreAttrs[] } without instantiating models
+```
+
+Routes: `fetch`/`update`/`delete` use `{route}/{identifier}`, `save` on a new model posts to `{route}`. The identifier defaults to `_id`; pass `identifier` to `configureTransport()` for `id` or anything else.
+
 ## Options
 
 ```ts
@@ -603,21 +644,19 @@ function UserForm() {
 
 ### Nuxt
 
-`@risklight/models/nuxt` binds models to a REST resource by a static `route` and routes HTTP through a fetcher you provide, so SSR (`$fetch`) and client (`$csrfFetch`, cookies, CSRF headers) both work without axios. Vue reactivity is enabled automatically.
+`@risklight/models/nuxt` is `ResourceModel`/`ResourceCollection` plus the Vue adapter, exported under Nuxt names (`NuxtModel`, `NuxtCollection`, `configureNuxtModels`). The only Nuxt-specific piece is the fetcher, which lives in your app because it needs `$fetch` and `useNuxtApp()`:
 
 ```ts
 // plugins/models.ts
 import { configureNuxtModels } from '@risklight/models/nuxt'
 
-export default defineNuxtPlugin((nuxtApp) => {
+export default defineNuxtPlugin(() => {
   configureNuxtModels({
     fetcher: async ({ url, method, data, params, headers }) => {
-      const fetcher = import.meta.server ? $fetch : (nuxtApp.$csrfFetch as typeof $fetch)
+      const fetcher = import.meta.server ? $fetch : (useNuxtApp().$csrfFetch as typeof $fetch)
       const res = await fetcher.raw(url, { method: method as any, body: data as any, query: params, headers })
       return { data: res._data, status: res.status, headers: Object.fromEntries(res.headers.entries()) }
-    },
-    // unwrap: (payload) => payload.data   // default: unwraps { data } envelopes
-    // identifier: '_id'                   // default
+    }
   })
 })
 ```
@@ -626,29 +665,13 @@ export default defineNuxtPlugin((nuxtApp) => {
 import { NuxtModel, NuxtCollection } from '@risklight/models/nuxt'
 import type { Identified } from '@risklight/models'
 
-interface GenreAttrs extends Identified { name: string; description?: string }
-
 class Genre extends NuxtModel<GenreAttrs> {
   static route = '/api/genre'
   defaults(): Partial<GenreAttrs> { return { _id: '', name: '', description: '' } }
 }
-
-class Genres extends NuxtCollection<Genre> {
-  model() { return Genre }
-}
-
-const genre = new Genre()
-await genre.fetchOne('a1')        // GET  /api/genre/a1
-genre.name = 'Landscape'
-await genre.save()                // PUT  /api/genre/a1   (POST /api/genre when new)
-await genre.delete()              // DELETE /api/genre/a1
-
-const genres = new Genres()
-await genres.fetchAll()           // GET /api/genre → genres.models / genres.items (plain objects)
-await Genre.fetchAll()            // { data: GenreAttrs[] } without instantiating models
 ```
 
-Routes: `fetch`/`update`/`delete` use `{route}/{identifier}`, `save` on a new model posts to `{route}`. The identifier defaults to `_id`; pass `identifier` to `configureNuxtModels()` for `id` or anything else.
+SSR goes through `$fetch`, the client through `$csrfFetch` with cookies and CSRF headers. See [REST resources](#rest-resources) for the full API.
 
 ### Vanilla JS / Node.js
 
@@ -696,18 +719,16 @@ import type { NuxtModelBase, NuxtModelConstructor } from '@risklight/models/nuxt
 function describe<M extends ModelBase<any>>(model: M) { return model.toJSON() }
 ```
 
-### Nuxt adapter types
-
-Exported from `@risklight/models/nuxt` and re-exported as types from the root:
+### Transport and resource types
 
 ```ts
-import type { NuxtFetcher, NuxtRequestConfig, NuxtRawResponse, NuxtModelsOptions } from '@risklight/models'
-import type { Identified, Attributes } from '@risklight/models'
+import type { Fetcher, RequestConfig, RawResponse, TransportOptions, Identified, Attributes } from '@risklight/models'
+import type { ResourceModelConstructor } from '@risklight/models'
 
-const fetcher: NuxtFetcher = async ({ url, method, data, params, headers }: NuxtRequestConfig): Promise<NuxtRawResponse> => { /* ... */ }
+const fetcher: Fetcher = async (config: RequestConfig): Promise<RawResponse> => { /* ... */ }
 
-interface GenreAttrs extends Identified { name: string }      // Identified ({ _id?: string }) is a core type
-type GenreRow = Attributes<Genre>                             // toJSON() shape of any model; what NuxtCollection#items yields
+interface GenreAttrs extends Identified { name: string }      // Identified is { _id?: string }
+type GenreRow = Attributes<Genre>                             // toJSON() shape of any model; what ResourceCollection#items yields
 ```
 
 ## Error handling

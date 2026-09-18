@@ -26,16 +26,14 @@ import type { NuxtModelBase, NuxtModelConstructor } from '@risklight/models/nuxt
 function describe<M extends ModelBase<any>>(model: M) { return model.toJSON() }
 ```
 
-### Nuxt adapter types
-
-Exported from `@risklight/models/nuxt` and re-exported as types from the root:
+### Transport and resource types
 
 ```ts
-import type { NuxtFetcher, NuxtRequestConfig, NuxtRawResponse, NuxtModelsOptions } from '@risklight/models'
-import type { Identified, Attributes } from '@risklight/models'
+import type { Fetcher, RequestConfig, RawResponse, TransportOptions, Identified, Attributes } from '@risklight/models'
+import type { ResourceModelConstructor } from '@risklight/models'
 
-const fetcher: NuxtFetcher = async ({ url, method, data, params, headers }: NuxtRequestConfig): Promise<NuxtRawResponse> => { /* ... */ }
+const fetcher: Fetcher = async (config: RequestConfig): Promise<RawResponse> => { /* ... */ }
 
-interface GenreAttrs extends Identified { name: string }      // Identified ({ _id?: string }) is a core type
-type GenreRow = Attributes<Genre>                             // toJSON() shape of any model; what NuxtCollection#items yields
+interface GenreAttrs extends Identified { name: string }      // Identified is { _id?: string }
+type GenreRow = Attributes<Genre>                             // toJSON() shape of any model; what ResourceCollection#items yields
 ```

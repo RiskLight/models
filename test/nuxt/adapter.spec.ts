@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { isReactive } from 'vue'
 import { configureNuxtModels, resetNuxtModels, NuxtModel, NuxtCollection } from '../../src/nuxt'
 import type { NuxtRequestConfig } from '../../src/nuxt'
-import { RequestError } from '../../src'
+import { RequestError, Request } from '../../src'
 
 interface GenreAttrs { _id?: string; name: string; description?: string }
 
@@ -47,10 +47,9 @@ beforeEach(() => {
 })
 
 describe('configuration', () => {
-  it('throws a clear error when the fetcher is not configured', async () => {
+  it('falls back to the default axios request when no fetcher is configured', () => {
     resetNuxtModels()
-    const genre = new Genre()
-    await expect(genre.fetchOne('a1')).rejects.toThrow(/configureNuxtModels/)
+    expect(new Genre().createRequest({ url: '/api/genre/a1', method: 'GET' })).toBeInstanceOf(Request)
   })
 })
 

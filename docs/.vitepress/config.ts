@@ -23,6 +23,7 @@ export default defineConfig({
           { text: 'Collection', link: '/guide/collection' },
           { text: 'Validation', link: '/guide/validation' },
           { text: 'HTTP', link: '/guide/http' },
+          { text: 'REST resources', link: '/guide/resources' },
           { text: 'Exported types', link: '/guide/types' }
         ]
       },
