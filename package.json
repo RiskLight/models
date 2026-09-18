@@ -1,6 +1,6 @@
 {
   "name": "@risklight/models",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "type": "module",
   "description": "Framework-agnostic Model/Collection with Proxy-based reactivity and Zod validation",
   "repository": {
@@ -8,7 +8,22 @@
     "url": "git+https://github.com/RiskLight/models.git"
   },
   "homepage": "https://github.com/RiskLight/models",
-  "keywords": ["model", "collection", "vue", "react", "proxy", "reactivity", "orm", "rest", "crud", "validation", "zod", "typescript", "vue-mc"],
+  "keywords": [
+    "model",
+    "collection",
+    "vue",
+    "react",
+    "proxy",
+    "reactivity",
+    "orm",
+    "rest",
+    "crud",
+    "validation",
+    "zod",
+    "typescript",
+    "vue-mc",
+    "nuxt"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -27,6 +42,10 @@
     "./validation": {
       "import": "./dist/validation/index.js",
       "types": "./dist/validation/index.d.ts"
+    },
+    "./nuxt": {
+      "import": "./dist/nuxt/index.js",
+      "types": "./dist/nuxt/index.d.ts"
     }
   },
   "files": [
