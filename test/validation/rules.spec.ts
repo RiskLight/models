@@ -6,6 +6,7 @@ import {
   between, min, max, length, gt, gte, lt, lte,
   equals, string as stringRule, array, object,
   defined, empty,
+  same,
 } from '../../src'
 
 // --- Format validators (backed by Zod under the hood) ---
@@ -215,5 +216,32 @@ describe('Validation: model integration', () => {
     user.email = 'john@test.com'
     const errors2 = await user.validate()
     expect(errors2).toEqual({}) // valid
+  })
+})
+
+describe('combinators report the failing rule', () => {
+  it('and() uses the message of the rule that failed', () => {
+    const rule = required.and(email)
+    expect(rule.validate('')).toBe(required.message)
+    expect(rule.validate('broken')).toBe(email.message)
+    expect(rule.validate('a@b.co')).toBe(true)
+  })
+
+  it('and() forwards attribute and model to both rules', () => {
+    const rule = required.and(same('password'))
+    const model = { get: (k: string) => (k === 'password' ? 'secret' : undefined) }
+    expect(rule.validate('secret', 'confirm', model)).toBe(true)
+    expect(rule.validate('other', 'confirm', model)).toBe(same('password').message)
+  })
+
+  it('format() overrides the message of a combined rule', () => {
+    const rule = required.and(email).format('Need a real email')
+    expect(rule.validate('broken')).toBe('Need a real email')
+  })
+
+  it('or() keeps the first message when both fail', () => {
+    const rule = email.or(url)
+    expect(rule.validate('nope')).toBe(email.message)
+    expect(rule.validate('https://x.io')).toBe(true)
   })
 })

@@ -9,10 +9,16 @@ import { getMessage } from './messages.js'
 export class Rule {
   _test: (value: any, attribute?: string, model?: any) => boolean
   private _message: string
+  private _resolveMessage?: (value: any, attribute?: string, model?: any) => string
 
-  constructor(test: (value: any, attribute?: string, model?: any) => boolean, message: string = 'Invalid value') {
+  constructor(
+    test: (value: any, attribute?: string, model?: any) => boolean,
+    message: string = 'Invalid value',
+    resolveMessage?: (value: any, attribute?: string, model?: any) => string,
+  ) {
     this._test = test
     this._message = message
+    this._resolveMessage = resolveMessage
   }
 
   test(value: any, attribute?: string, model?: any): boolean {
@@ -20,31 +26,40 @@ export class Rule {
   }
 
   validate(value: any, attribute?: string, model?: any): true | string {
-    return this._test(value, attribute, model) ? true : this._message
+    if (this._test(value, attribute, model)) return true
+    return this._resolveMessage ? this._resolveMessage(value, attribute, model) : this._message
   }
 
+  /** Both rules must pass. The message comes from the rule that failed. */
   and(other: Rule): Rule {
-    const test = this._test
+    const left: Rule = this
     return new Rule(
-      (v) => test(v) && other.test(v),
+      (v, a, m) => left.test(v, a, m) && other.test(v, a, m),
       this._message,
+      (v, a, m) => {
+        const first = left.validate(v, a, m)
+        return first === true ? (other.validate(v, a, m) as string) : first
+      },
     )
   }
 
+  /** At least one rule must pass. The message comes from the first rule. */
   or(other: Rule): Rule {
-    const test = this._test
+    const left: Rule = this
     return new Rule(
-      (v) => test(v) || other.test(v),
+      (v, a, m) => left.test(v, a, m) || other.test(v, a, m),
       this._message,
+      (v, a, m) => left.validate(v, a, m) as string,
     )
   }
 
+  /** Override the message for this rule, including combined rules. */
   format(message: string): Rule {
     return new Rule(this._test, message)
   }
 
   copy(): Rule {
-    return new Rule(this._test, this._message)
+    return new Rule(this._test, this._message, this._resolveMessage)
   }
 
   get message(): string {

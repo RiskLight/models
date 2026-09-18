@@ -6,3 +6,5 @@ dist/
 playground/
 playground-react/
 Users/
+docs/.vitepress/dist
+docs/.vitepress/cache

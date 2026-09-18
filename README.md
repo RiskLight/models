@@ -1,6 +1,8 @@
 # @risklight/models
 
-Framework-agnostic Model/Collection library with Proxy-based reactivity, HTTP layer (axios), Zod validation, and first-class TypeScript generics. Works standalone, with Vue 3, or with React.
+**Docs:** https://risklight.github.io/models/
+
+Framework-agnostic Model/Collection library with Proxy-based reactivity, a pluggable HTTP layer, Zod validation, and first-class TypeScript generics. Works standalone, with Vue 3, React, or Nuxt.
 
 Drop-in replacement for [vue-mc](https://github.com/FiguredLimited/vue-mc) — same API, no framework lock-in.
 
