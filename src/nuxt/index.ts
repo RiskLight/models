@@ -3,9 +3,9 @@ import { ModelBase } from '../core/Model.js'
 import { Collection } from '../core/Collection.js'
 import { Response } from '../core/Response.js'
 import { RequestError } from '../core/errors.js'
-import type { Identified } from '../core/types.js'
+import type { Identified, Attributes } from '../core/types.js'
 
-export type { Identified }
+export type { Identified, Attributes }
 
 export interface NuxtRequestConfig {
   url: string
@@ -72,7 +72,6 @@ export class NuxtRequest {
   }
 }
 
-export type Attributes<M extends ModelBase<any>> = ReturnType<M['toJSON']>
 export class NuxtModelBase<A extends Record<string, any> = Identified> extends ModelBase<A> {
   static route = ''
 

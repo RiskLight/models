@@ -1,4 +1,4 @@
-// @risklight/models — Type definitions for vue-mc compatibility
+import type { ModelBase } from './Model.js'
 
 export type Routes = Record<string, string>
 
@@ -29,3 +29,5 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export interface Identified {
   _id?: string
 }
+
+export type Attributes<M extends ModelBase<any>> = ReturnType<M['toJSON']>
