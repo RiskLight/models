@@ -1,6 +1,6 @@
 # HTTP
 
-HTTP goes through `createRequest()`: axios by default, or whatever the adapter provides (the Nuxt adapter uses the fetcher you configure). Override `createRequest()` on a model or collection to plug in anything else.
+HTTP goes through `createRequest()`: axios by default, or the transport configured with `configureTransport()` when you use `ResourceModel`/`ResourceCollection` (see [REST resources](/guide/resources)). Override `createRequest()` on a model or collection to plug in anything else.
 
 ## Model
 
