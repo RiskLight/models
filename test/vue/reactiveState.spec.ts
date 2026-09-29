@@ -64,4 +64,30 @@ describe('Vue adapter: reactive errors and state', () => {
     genre.loading = true
     expect(busy.value).toBe(true)
   })
+
+  it('deleting and fatal flags are tracked', () => {
+    const genre = new Genre()
+    const state = computed(() => [genre.deleting, genre.fatal])
+    expect(state.value).toEqual([false, false])
+    genre.deleting = true
+    genre.fatal = true
+    expect(state.value).toEqual([true, true])
+  })
+
+  it('clone() gets its own reactive errors', async () => {
+    const genre = new Genre()
+    const copy = genre.clone()
+    const copyError = computed(() => copy.errors.name)
+    await genre.validate()
+    expect(copyError.value).toBeUndefined()
+    await copy.validate()
+    expect(copyError.value).toEqual(['Name is required'])
+  })
+
+  it('patches boot only once when the adapter is imported again', async () => {
+    const boot = Model.prototype.boot
+    await import('../../src/vue/index.ts?again')
+    expect(Model.prototype.boot).toBe(boot)
+  })
 })
+
