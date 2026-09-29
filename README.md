@@ -188,6 +188,10 @@ class User extends Model {
 }
 ```
 
+### Nested attributes
+
+Errors for nested fields are keyed by the full dotted path (`'basic_info.title'`, `'genres.1'`), so each message can sit next to its own input. `validation()` rules accept the same dotted keys.
+
 ### Rule combinators
 
 ```ts

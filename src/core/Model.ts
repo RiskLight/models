@@ -1,21 +1,16 @@
-// @risklight/models — Model
 
 import { get, set as _set, defaults as _defaults, pick, flow, castArray, isFunction, isPlainObject, isEmpty, isUndefined, isEqual } from 'lodash-es'
 import { Request } from './Request.js'
 import { Response } from './Response.js'
 import { RequestError, ResponseError, ValidationError } from './errors.js'
 
-
 type Listener = (context: Record<string, any>) => void
 type Mutation = (value: any) => any
 
 let _uidCounter = 0
 
-
-
 export class ModelBase<A extends Record<string, any> = Record<string, any>> {
 
-  // --- Internal state ---
   _attributes: Record<string, any> = {}
   _reference: Record<string, any> = {}
   _listeners: Record<string, Set<Listener>> = {}
@@ -29,13 +24,11 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
   _wasNew: boolean = false
   _booted: boolean = false
 
-  // --- HTTP: state flags ---
   loading: boolean = false
   saving: boolean = false
   deleting: boolean = false
   fatal: boolean = false
 
-  // --- HTTP: RequestOperation constants ---
   static REQUEST_CONTINUE = 0
   static REQUEST_SKIP = 1
   static REQUEST_REDUNDANT = 2
@@ -43,46 +36,34 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
   constructor(attributes?: Partial<A> & Record<string, any>, collection?: any, options?: Record<string, any>) {
     this._uid = `m${++_uidCounter}`
 
-    // Merge options: class defaults < getDefaultOptions < options() < constructor options
     this._options = _defaults({}, options, this.options(), this.getDefaultOptions())
 
-    // Register collection
     if (collection) {
       this.registerCollection(collection)
     }
 
-    // Memoize expensive methods
     this.memoize()
 
-    // Compile mutations
     this.compileMutators()
 
-    // Set default attributes
     const defs = this.defaults()
     for (const [key, val] of Object.entries(defs)) {
       this._attributes[key] = val
     }
 
-    // Apply initial attributes over defaults
     if (attributes) {
       for (const [key, val] of Object.entries(attributes)) {
         this._attributes[key] = val
       }
     }
 
-    // Apply mutations to initial attributes
     this.mutate()
 
-    // Sync initial state
     this._reference = JSON.parse(JSON.stringify(this._attributes))
 
-    // Boot hook
     this.boot()
-    // Delay _booted so subclass field initializers (protected backendBaseURL = ...)
-    // run before we start warning about undeclared attributes
     queueMicrotask(() => { this._booted = true })
 
-    // Return Proxy that intercepts ALL property access
     const STATE_PROPS = ['loading', 'saving', 'deleting', 'fatal']
     const isDeclaredUnderscoreAttribute = (target: any, key: string) =>
       key.startsWith('_') &&
@@ -102,25 +83,21 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
           return true
         }
 
-        // Internal/private properties, prototype methods, state flags
         if (key.startsWith('_') || key in target.constructor.prototype || STATE_PROPS.includes(key)) {
           (target as any)[key] = value
           return true
         }
 
-        // If key is a known attribute (from defaults), go through setAttribute
         if (key in target._attributes) {
           target._setAttribute(key, value)
           return true
         }
 
-        // Before boot completes: class field initialization — put on target silently
         if (!target._booted) {
           (target as any)[key] = value
           return true
         }
 
-        // After boot: undeclared attribute via dot notation — warn and put in _attributes
         target._setAttribute(key, value)
         return true
       },
@@ -135,18 +112,15 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
           return target._attributes[key]
         }
 
-        // Internal/private, methods, known non-attribute properties
         if (key.startsWith('_') || key in target.constructor.prototype || STATE_PROPS.includes(key)) {
           return (target as any)[key]
         }
 
-        // If it's a known attribute, return from _attributes
         if (key in target._attributes) {
           target._trackSignal(key)
           return target._attributes[key]
         }
 
-        // Own instance property (class fields like backendBaseURL)
         if (Object.prototype.hasOwnProperty.call(target, key)) {
           return (target as any)[key]
         }
@@ -155,8 +129,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
       },
     })
   }
-
-  // --- Overridable configuration ---
 
   defaults(): Partial<A> { return {} }
   schema(): any { return null }
@@ -188,7 +160,7 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
       routeParameterPattern: this.getDefaultRouteParameterPattern(),
       validationErrorStatus: 422,
       methods: this.getDefaultMethods(),
-      paramsSerializer: null, // function(params) => string, e.g. qs.stringify
+      paramsSerializer: null,
     }
   }
 
@@ -211,12 +183,9 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     return this.getOption('paramsSerializer') || null
   }
 
-  // --- Internal: attribute management ---
-
   _setAttribute(key: string, value: any): void {
     const debug = this.getOption('debug')
 
-    // Warn on undeclared attributes
     if (debug && !(key in (this._cache.defaults || this.defaults()))) {
       const msg = `[models] Undeclared "${key}" on ${this.constructor.name}`
       if (debug === 'strict') {
@@ -225,7 +194,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
       console.warn(msg)
     }
 
-    // Apply mutation on change if enabled
     if (this.getOption('mutateOnChange')) {
       value = this.mutated(key, value)
     }
@@ -234,7 +202,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     this._attributes[key] = value
 
     if (!isEqual(previous, value)) {
-      // Auto-validate on change if enabled
       if (this.getOption('validateOnChange')) {
         this.validate(key)
       }
@@ -246,17 +213,12 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
   }
 
   _trackSignal(_key: string): void {
-    // Hook point for framework adapters
   }
 
   _notifySignal(key: string, value: any, previous: any): void {
-    // Per-property subscribers
     this._signals[key]?.forEach(fn => fn(value, previous))
-    // Wildcard subscribers
     this._signals['*']?.forEach(fn => fn(key, value, previous))
   }
-
-  // --- Attribute access ---
 
   get<K extends keyof A>(key: K, fallback?: A[K]): A[K]
   get(key: string, fallback?: any): any
@@ -281,8 +243,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     return attribute in this._attributes
   }
 
-  // --- Saved state ---
-
   saved<K extends keyof A>(key: K, fallback?: A[K]): A[K] | undefined
   saved(key: string, fallback?: any): any
   saved(key: string, fallback?: any): any {
@@ -292,8 +252,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
   get $(): Partial<A> & Record<string, any> {
     return { ...this._reference } as Partial<A> & Record<string, any>
   }
-
-  // --- Sync / Reset / Changed ---
 
   sync(attribute?: string | string[]): void {
     if (this.getOption('mutateBeforeSync')) {
@@ -314,7 +272,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
   reset(attribute?: string | string[]): void {
     const ref = JSON.parse(JSON.stringify(this._reference))
     if (isUndefined(attribute)) {
-      // Mutate in place to preserve Vue reactivity
       for (const key of Object.keys(this._attributes)) {
         this._attributes[key] = ref[key]
       }
@@ -368,7 +325,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     const defs = this._cache.defaults || this.defaults()
     const merged = { ...defs, ...attributes }
 
-    // Set each attribute through _setAttribute for signals/events
     for (const [key, value] of Object.entries(merged)) {
       const previous = this._attributes[key]
       this._attributes[key] = value
@@ -377,11 +333,8 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
       }
     }
 
-    // Sync reference state
     this._reference = JSON.parse(JSON.stringify(this._attributes))
   }
-
-  // --- Identity ---
 
   identifier(): any {
     const key = this.getOption('identifier')
@@ -397,21 +350,15 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     return !this.isNew()
   }
 
-  // --- Events / Signals ---
-
   on(event: string, callback: Function): void {
-    // Check if this is a signal (per-property) or event
-    // Comma-separated events
     const events = event.split(',').map(e => e.trim())
     for (const evt of events) {
-      // Signals: property names + wildcard '*'
       if (evt === '*' || (evt in this._attributes)) {
         if (!this._signals[evt]) {
           this._signals[evt] = new Set()
         }
         this._signals[evt].add(callback)
       }
-      // Events
       if (!this._listeners[evt]) {
         this._listeners[evt] = new Set()
       }
@@ -431,13 +378,10 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     this._listeners[event]?.forEach(fn => fn(context))
   }
 
-  // --- Validation ---
-
   async validate(attributes?: string | string[]): Promise<Record<string, any>> {
     const schema = this.schema()
     const rules = this._cache.validation || this.validation()
 
-    // schema() takes priority over validation()
     if (schema) {
       await this._validateWithZod(schema, attributes)
     } else if (!isEmpty(rules)) {
@@ -446,7 +390,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
       this._errors = {}
     }
 
-    // Recursively validate nested models/collections
     if (this.getOption('validateRecursively') && !attributes) {
       await this._validateNested()
     }
@@ -476,10 +419,9 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
       return
     }
 
-    // Convert Zod errors to vue-mc format
     const errors: Record<string, string | string[]> = {}
     for (const issue of result.error.issues) {
-      const key = issue.path[0] as string
+      const key = issue.path.map(String).join('.')
       if (key) {
         if (this.getOption('useFirstErrorOnly')) {
           if (!errors[key]) errors[key] = issue.message
@@ -501,7 +443,7 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
       const rule = rules[key]
       if (!rule) continue
 
-      const value = this._attributes[key]
+      const value = get(this._attributes, key)
       const result = rule.validate ? rule.validate(value, key, this) : true
 
       if (result !== true) {
@@ -529,8 +471,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     this.fatal = false
   }
 
-  // --- Options ---
-
   getOption(path: string, fallback?: any): any {
     return get(this._options, path, fallback)
   }
@@ -547,8 +487,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     this._options = _defaults(this._options, ...options)
   }
 
-  // --- Clone / Serialization ---
-
   clone(): this {
     const Constructor = this.constructor as any
     return new Constructor({ ...this._attributes }, undefined, { ...this._options })
@@ -557,8 +495,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
   toJSON(): A & Record<string, any> {
     return { ...this._attributes } as A & Record<string, any>
   }
-
-  // --- HTTP: route resolution ---
 
   getRoute(key: string, fallback?: string): string {
     return (this._cache.routes || this.routes())[key] || fallback || ''
@@ -608,8 +544,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
   getUpdateRoute(): string { return this.getRoute('save') }
   getPatchRoute(): string { return this.getRoute('save') }
 
-  // --- HTTP: methods ---
-
   getFetchMethod(): string { return this.getOption('methods.fetch') }
   getCreateMethod(): string { return this.getOption('methods.create') }
   getDeleteMethod(): string { return this.getOption('methods.delete') }
@@ -629,8 +563,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     return this.getOption('patch') === true
   }
 
-  // --- HTTP: headers / query ---
-
   getDefaultHeaders(): Record<string, any> { return {} }
   getFetchHeaders(): Record<string, any> { return this.getDefaultHeaders() }
   getSaveHeaders(): Record<string, any> { return this.getDefaultHeaders() }
@@ -639,8 +571,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
   getSaveQuery(): Record<string, any> { return {} }
   getDeleteQuery(): Record<string, any> { return {} }
   getDeleteBody(): any { return {} }
-
-  // --- HTTP: save data ---
 
   getSaveData(): Record<string, any> {
     if (this.isExisting() && this.shouldPatch()) {
@@ -652,8 +582,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     }
     return { ...this._attributes }
   }
-
-  // --- HTTP: lifecycle hooks ---
 
   onFetch(): Promise<number> {
     return new Promise((resolve) => {
@@ -716,7 +644,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
           if (this.shouldAllowIdentifierOverwrite(currentId, newId)) {
             this.assign(data)
           } else {
-            // Update all except identifier
             const idKey = this.getOption('identifier')
             const { [idKey]: _id, ...rest } = data
             for (const [k, v] of Object.entries(rest)) {
@@ -728,7 +655,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
         }
       }
     }
-    // Detect create vs update
     let action = this._wasNew ? 'create' : 'update'
     if (response) {
       const status = response.getStatus?.()
@@ -786,8 +712,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     this.deleting = false
     this.emit('delete', { error })
   }
-
-  // --- HTTP: request ---
 
   request(config: any, onRequest: () => Promise<number>, onSuccess: (r: any) => void, onFailure: (e: any, r?: any) => void): Promise<any> {
     return new Promise((resolve, reject) => {
@@ -884,8 +808,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     return new Request(config)
   }
 
-  // --- HTTP: validation errors ---
-
   isBackendValidationError(error: any): boolean {
     return error?.response?.getStatus?.() === this.getValidationErrorStatus()
   }
@@ -893,8 +815,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
   getValidationErrorStatus(): number {
     return this.getOption('validationErrorStatus')
   }
-
-  // --- HTTP: FormData ---
 
   convertObjectToFormData(data: Record<string, any>, form?: FormData, prefix?: string): FormData {
     form = form || new FormData()
@@ -924,11 +844,8 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     return form
   }
 
-  // --- HTTP: response update ---
-
   update(data: any): void {
     if (isEmpty(data)) {
-      // Empty response — just sync
       return
     }
 
@@ -937,15 +854,12 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
       return
     }
 
-    // If data is a scalar, treat as identifier
     if (this.isValidIdentifier(data)) {
       const idKey = this.getOption('identifier')
       this._attributes[idKey] = data
       this._reference[idKey] = data
     }
   }
-
-  // --- Identifier logic ---
 
   parseIdentifier(data: Record<string, any>): any {
     return data[this.getOption('identifier')]
@@ -957,11 +871,8 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
 
   shouldAllowIdentifierOverwrite(currentId: any, _newId: any): boolean {
     if (this.getOption('overwriteIdentifier')) return true
-    // Allow if current is "new" (no valid id)
     return !this.isValidIdentifier(currentId)
   }
-
-  // --- Mutations ---
 
   compileMutators(): void {
     const mutations = this.mutations()
@@ -988,8 +899,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
       }
     }
   }
-
-  // --- Collections ---
 
   registerCollection(collection: any | any[]): void {
     for (const c of castArray(collection)) {
@@ -1022,8 +931,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     return this._collections
   }
 
-  // --- Compat: vue-mc API ---
-
   get $class(): string {
     return this.constructor.name
   }
@@ -1054,8 +961,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     return this.validate(attribute)
   }
 
-  // --- Deep serialization ---
-
   toPlainObject(): Record<string, any> {
     const result: Record<string, any> = {}
     for (const [key, value] of Object.entries(this._attributes)) {
@@ -1069,8 +974,6 @@ export class ModelBase<A extends Record<string, any> = Record<string, any>> {
     }
     return result
   }
-
-  // --- Error factories (overridable) ---
 
   createValidationError(errors: any, message?: string): ValidationError {
     return new ValidationError(errors, message)

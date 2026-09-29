@@ -39,6 +39,33 @@ class User extends Model {
 }
 ```
 
+## Nested attributes
+
+Errors for nested fields are keyed by the full dotted path, so a form can put each message next to its own input. Array items use their index.
+
+```ts
+class Artwork extends Model {
+  defaults() { return { basic_info: { title: '' }, genres: [] } }
+  schema() {
+    return z.object({
+      basic_info: z.object({ title: z.string().min(1, 'Title is required') }),
+      genres: z.array(z.string().min(1)),
+    })
+  }
+}
+
+await artwork.validate()
+// { 'basic_info.title': ['Title is required'] }
+```
+
+`validation()` rules accept the same dotted keys:
+
+```ts
+validation() {
+  return { 'basic_info.title': required }
+}
+```
+
 ## Rule combinators
 
 ```ts
